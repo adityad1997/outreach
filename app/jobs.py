@@ -90,6 +90,71 @@ def clear_inbox_auth_failure(inbox_id: int) -> None:
     _inbox_auth_cooldown_until.pop(inbox_id, None)
 
 
+async def _handle_classified_send_failure(
+    session: AsyncSession,
+    *,
+    result: SendFailure,
+    lead: Lead,
+    campaign: Campaign,
+    inbox: Inbox,
+    cl: CampaignLead,
+    slot: QueueSlot,
+    simulate_send: bool,
+    now: datetime,
+) -> str:
+    """Classify + record a SendFailure. Returns 'auth_break' | 'done' | 'retry'."""
+    from app.delivery_failures import (
+        apply_transient_backoff,
+        record_delivery_failure,
+    )
+
+    source = inbox.provider or "smtp"
+    if source not in ("gmail", "office365", "smtp"):
+        source = "smtp"
+
+    clf = await record_delivery_failure(
+        session,
+        campaign_id=campaign.id,
+        lead_id=lead.id,
+        inbox_id=inbox.id,
+        sequence_index=slot.sequence_index,
+        to_email=lead.email,
+        error_type=result.error_type,
+        error_message=result.message,
+        source=source,
+        fire_webhook_event=fire_webhook_event,
+        smtp_stage=getattr(result, "smtp_stage", None),
+        http_status=getattr(result, "http_status", None),
+        simulate_send=simulate_send,
+        lead=lead,
+        inbox=inbox,
+    )
+
+    if clf is None:
+        # simulate / ignored
+        await session.delete(slot)
+        return "done"
+
+    if clf.pause_inbox_auth:
+        # record_delivery_failure already paused + fired token_expired idempotently.
+        # Keep the slot so sending resumes after credentials are fixed.
+        _mark_inbox_auth_failure(inbox.id, now)
+        return "auth_break"
+
+    if clf.is_transient or clf.failure_class in ("recipient_soft", "sender_quota", "sender_state"):
+        ok = await apply_transient_backoff(slot)
+        if not ok:
+            await session.delete(slot)
+            return "done"
+        return "retry"
+
+    # Permanent recipient/sender/content — consume the slot
+    # (recipient hard may already have cleared it via lead-global bounce)
+    from sqlalchemy import delete as sql_delete
+    await session.execute(sql_delete(QueueSlot).where(QueueSlot.id == slot.id))
+    return "done"
+
+
 def _auth_failure_event_data(inbox: Inbox, result: SendFailure) -> dict:
     """Build a correctly-labelled auth-failure event payload for notifications."""
     return {
@@ -244,6 +309,7 @@ async def run_send_job():
                     QueueSlot.inbox_id == inbox.id,
                     func.date(QueueSlot.scheduled_date) == today,
                     QueueSlot.scheduled_date <= now,
+                    (QueueSlot.next_attempt_at.is_(None)) | (QueueSlot.next_attempt_at <= now),
                 )
                 .order_by(QueueSlot.scheduled_date, QueueSlot.position_in_day)
             )
@@ -902,63 +968,35 @@ async def run_send_job():
                         await session.commit()
                         raise
 
-                # ── Handle permanent failure (bounce / auth) ─────────────────
+                # ── Handle permanent / classified failure ────────────────────
                 if isinstance(result, SendFailure):
                     log.warning(
-                        "Permanent send failure for lead_id=%s inbox=%s: [%s] %s",
+                        "Send failure for lead_id=%s inbox=%s: [%s] %s",
                         lead.id, inbox.email, result.error_type, result.message,
                     )
-                    # Delete the pre-created log entry
                     await session.delete(email_log_entry)
-
-                    # Mark lead as bounced and delete remaining queue slots
-                    if result.error_type in ("bounce", "invalid_recipient"):
-                        prev_enr = getattr(cl, "enrollment_status", None) or "active"
-                        cl.enrollment_status = "bounced"
-                        # Delete ALL remaining queue slots for this lead+campaign
-                        from sqlalchemy import delete as sql_delete
-                        await session.execute(
-                            sql_delete(QueueSlot).where(
-                                QueueSlot.campaign_lead_id == cl.id,
-                            )
-                        )
-                        await fire_webhook_event(session, "email.bounced", {
-                            "lead_id": lead.id,
-                            "lead_email": lead.email,
-                            "campaign_id": campaign.id,
-                            "inbox_id": inbox.id,
-                            "error_type": result.error_type,
-                            "error_message": result.message,
-                            "timestamp": time_provider.utcnow().isoformat() + "Z",
-                        })
-                        await fire_webhook_event(session, "lead.status_changed", {
-                            "lead_id": lead.id,
-                            "lead_email": lead.email,
-                            "campaign_id": campaign.id,
-                            "old_enrollment_status": prev_enr,
-                            "new_enrollment_status": "bounced",
-                            "reason": result.message,
-                            "timestamp": time_provider.utcnow().isoformat() + "Z",
-                        })
-                    elif result.error_type in ("auth_failed", "permission_denied"):
-                        _mark_inbox_auth_failure(inbox.id, now)
-                        if not inbox.paused:
-                            log.warning(
-                                "Send job: pausing inbox %s after %s — sending stops until "
-                                "credentials are fixed and the inbox is resumed",
-                                inbox.email, result.error_type,
-                            )
-                            inbox.paused = True
-                        await fire_webhook_event(
-                            session, "token_expired", _auth_failure_event_data(inbox, result)
-                        )
-                        # Stop processing this inbox — auth is broken
+                    outcome = await _handle_classified_send_failure(
+                        session,
+                        result=result,
+                        lead=lead,
+                        campaign=campaign,
+                        inbox=inbox,
+                        cl=cl,
+                        slot=slot,
+                        simulate_send=simulate_send,
+                        now=now,
+                    )
+                    if outcome == "auth_break":
                         break
                     continue
 
                 if not result:
                     # Transient failure — roll back the pre-created log; slot stays for retry
                     await session.delete(email_log_entry)
+                    from app.delivery_failures import apply_transient_backoff
+                    ok = await apply_transient_backoff(slot)
+                    if not ok:
+                        await session.delete(slot)
                     await _alert_repeated_send_failure(
                         session, inbox, getattr(smtp_account, "last_send_error", "") or ""
                     )
@@ -1658,6 +1696,18 @@ async def send_slot_job(slot_id: int) -> None:
         # a blocking SMTP/HTTP send leaves connections "idle in transaction"
         # and exhausts the pool when many slots are due at once.
         await session.commit()
+        # Concurrent send_slot_job tasks can race past the pre-flight pause check;
+        # re-read paused flags immediately before the network send.
+        await session.refresh(inbox)
+        await session.refresh(campaign)
+        if inbox.paused or getattr(campaign, "paused", False):
+            await session.delete(email_log_entry)
+            await session.commit()
+            log.info(
+                "send_slot_job: slot %d aborted — inbox/campaign paused before send",
+                slot_id,
+            )
+            return
         if simulate_send:
             fake_thread_id = prev_thread_id or f"test-thread-{email_log_entry.id}"
             result = SendResult(
@@ -1710,51 +1760,34 @@ async def send_slot_job(slot_id: int) -> None:
                 await session.commit()
                 raise
 
-        # ── Permanent failure ─────────────────────────────────────────────
+        # ── Classified failure ────────────────────────────────────────────
         if isinstance(result, SendFailure):
             log.warning(
-                "send_slot_job: permanent failure for lead_id=%s inbox=%s: [%s] %s",
+                "send_slot_job: failure for lead_id=%s inbox=%s: [%s] %s",
                 lead.id, inbox.email, result.error_type, result.message,
             )
             await session.delete(email_log_entry)
-            if result.error_type in ("bounce", "invalid_recipient"):
-                prev_enr = getattr(cl, "enrollment_status", None) or "active"
-                cl.enrollment_status = "bounced"
-                from sqlalchemy import delete as _sql_delete
-                await session.execute(
-                    _sql_delete(QueueSlot).where(QueueSlot.campaign_lead_id == cl.id)
-                )
-                await fire_webhook_event(session, "email.bounced", {
-                    "lead_id": lead.id, "lead_email": lead.email,
-                    "campaign_id": campaign.id, "inbox_id": inbox.id,
-                    "error_type": result.error_type, "error_message": result.message,
-                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                })
-                await fire_webhook_event(session, "lead.status_changed", {
-                    "lead_id": lead.id, "lead_email": lead.email,
-                    "campaign_id": campaign.id,
-                    "old_enrollment_status": prev_enr, "new_enrollment_status": "bounced",
-                    "reason": result.message,
-                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                })
-            elif result.error_type in ("auth_failed", "permission_denied"):
-                _mark_inbox_auth_failure(inbox.id, now)
-                if not inbox.paused:
-                    log.warning(
-                        "send_slot_job: pausing inbox %s after %s — sending stops until "
-                        "credentials are fixed and the inbox is resumed",
-                        inbox.email, result.error_type,
-                    )
-                    inbox.paused = True
-                await fire_webhook_event(
-                    session, "token_expired", _auth_failure_event_data(inbox, result)
-                )
+            await _handle_classified_send_failure(
+                session,
+                result=result,
+                lead=lead,
+                campaign=campaign,
+                inbox=inbox,
+                cl=cl,
+                slot=slot,
+                simulate_send=simulate_send,
+                now=now,
+            )
             await session.commit()
             return
 
         if not result:
             # Transient failure – roll back the pre-created log; slot stays for retry
             await session.delete(email_log_entry)
+            from app.delivery_failures import apply_transient_backoff
+            ok = await apply_transient_backoff(slot)
+            if not ok:
+                await session.delete(slot)
             await _alert_repeated_send_failure(
                 session, inbox, getattr(smtp_account, "last_send_error", "") or ""
             )

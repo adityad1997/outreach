@@ -407,6 +407,54 @@ async def set_telemetry_endpoint(
         raise HTTPException(500, f"Failed to update telemetry: {e}")
 
 
+# Bounce auto-pause -------------------------------------------------------
+
+@router.get("/bounce-autopause")
+async def get_bounce_autopause_endpoint(db: AsyncSession = Depends(get_db)):
+    """Return bounce auto-pause thresholds (campaign recipient / inbox sender)."""
+    from app.delivery_failures import get_bounce_autopause_settings
+
+    return await get_bounce_autopause_settings(db)
+
+
+class _BounceAutopausePayload(_BaseModel):
+    enabled: bool | None = None
+    threshold_pct: float | None = None
+    min_attempts: int | None = None
+    warn_threshold_pct: float | None = None
+
+
+@router.post("/bounce-autopause")
+async def set_bounce_autopause_endpoint(
+    payload: _BounceAutopausePayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update bounce auto-pause settings from the Settings UI."""
+    from app.app_settings import put_setting
+    from app.delivery_failures import (
+        BOUNCE_AUTOPAUSE_ENABLED_KEY,
+        BOUNCE_AUTOPAUSE_THRESHOLD_PCT_KEY,
+        BOUNCE_AUTOPAUSE_MIN_ATTEMPTS_KEY,
+        BOUNCE_WARN_THRESHOLD_PCT_KEY,
+        get_bounce_autopause_settings,
+    )
+
+    try:
+        if payload.enabled is not None:
+            await put_setting(db, BOUNCE_AUTOPAUSE_ENABLED_KEY, "true" if payload.enabled else "false")
+        if payload.threshold_pct is not None:
+            await put_setting(db, BOUNCE_AUTOPAUSE_THRESHOLD_PCT_KEY, str(float(payload.threshold_pct)))
+        if payload.min_attempts is not None:
+            await put_setting(db, BOUNCE_AUTOPAUSE_MIN_ATTEMPTS_KEY, str(int(payload.min_attempts)))
+        if payload.warn_threshold_pct is not None:
+            await put_setting(db, BOUNCE_WARN_THRESHOLD_PCT_KEY, str(float(payload.warn_threshold_pct)))
+        await db.commit()
+        return {"ok": True, **(await get_bounce_autopause_settings(db))}
+    except Exception as e:
+        log.error("set_bounce_autopause failed: %s", e)
+        raise HTTPException(500, f"Failed to update bounce auto-pause: {e}")
+
+
 # Survey tools / utility endpoints ----------------------------------------
 
 

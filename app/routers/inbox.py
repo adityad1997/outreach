@@ -213,10 +213,20 @@ async def list_inboxes(db: AsyncSession = Depends(get_db)):
     )
     pending_counts = {row[0]: row[1] for row in pending_res.all()}
 
+    from app.delivery_failures import inbox_health_14d, HEALTH_WINDOW_DAYS
+    health_map = await inbox_health_14d(db, [i.id for i in inboxes])
+
     for i in inboxes:
         i.sent_today = counts.get(i.id, 0)
         i.pending_leads = pending_counts.get(i.id, 0)
         i.effective_max_per_day = _compute_effective_limit(i)
+        h = health_map.get(i.id) or {}
+        i.health_window_days = h.get("health_window_days", HEALTH_WINDOW_DAYS)
+        i.sent_14d = h.get("sent_14d", 0)
+        i.recipient_bounces_14d = h.get("recipient_bounces_14d", 0)
+        i.sender_bounces_14d = h.get("sender_bounces_14d", 0)
+        i.bounce_rate_14d = h.get("bounce_rate_14d", 0.0)
+        i.sender_bounce_rate_14d = h.get("sender_bounce_rate_14d", 0.0)
         await _maybe_complete_ramp_up(i, db)
     await _attach_smtp_health(db, list(inboxes))
     return inboxes
@@ -271,6 +281,14 @@ async def get_inbox(inbox_id: int, db: AsyncSession = Depends(get_db)):
     )
     inbox.sent_today = count_res.scalar() or 0
     inbox.effective_max_per_day = _compute_effective_limit(inbox)
+    from app.delivery_failures import inbox_health_14d, HEALTH_WINDOW_DAYS
+    h = (await inbox_health_14d(db, [inbox_id])).get(inbox_id) or {}
+    inbox.health_window_days = h.get("health_window_days", HEALTH_WINDOW_DAYS)
+    inbox.sent_14d = h.get("sent_14d", 0)
+    inbox.recipient_bounces_14d = h.get("recipient_bounces_14d", 0)
+    inbox.sender_bounces_14d = h.get("sender_bounces_14d", 0)
+    inbox.bounce_rate_14d = h.get("bounce_rate_14d", 0.0)
+    inbox.sender_bounce_rate_14d = h.get("sender_bounce_rate_14d", 0.0)
     await _maybe_complete_ramp_up(inbox, db)
     await _attach_smtp_health(db, [inbox])
     return inbox
@@ -362,6 +380,7 @@ async def update_inbox(
                 if inbox.ramp_up_enabled and inbox.ramp_up_started_at is not None:
                     inbox.ramp_up_started_at += paused_dur
             inbox.ramp_up_paused_at = None
+            inbox.bounce_pause_watermark = datetime.utcnow()
         inbox.paused = data.paused
     await db.flush()
     
@@ -566,6 +585,7 @@ async def unpause_inbox(
     inbox.ramp_up_paused_at = None
 
     inbox.paused = False
+    inbox.bounce_pause_watermark = datetime.utcnow()
     await db.flush()
 
     # A manual resume is an explicit operator statement that the credential is

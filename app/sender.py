@@ -59,11 +59,14 @@ class SendResult:
 class SendFailure:
     """Returned when sending fails permanently (e.g. bounce, invalid recipient).
 
-    Callers should NOT retry the send.  The lead should be marked with the
-    appropriate status (e.g. ``bounced``) and remaining queue slots deleted.
+    Callers should classify via ``app.bounce_classify`` before marking leads.
+    Coarse ``error_type`` is a hint only — DATA 5xx is not automatically a
+    recipient bounce.
     """
     error_type: str   # "bounce", "invalid_recipient", "permission_denied", "auth_failed"
     message: str
+    smtp_stage: Optional[str] = None  # rcpt | data | mail | auth
+    http_status: Optional[int] = None
 
     def __bool__(self):
         return False
@@ -686,24 +689,33 @@ def _send_via_gmail(
                 gmail_account.token_expiry = creds.expiry
             gmail_account.updated_at = datetime.utcnow()
 
-        # second call to get the real Message-ID header
+        # Enrich Message-ID header. Failures here must NOT become SendFailure —
+        # the message was already accepted by Gmail.
         real_message_id = message_id
         if gmail_msg_id:
-            get_resp = (
-                service.users()
-                .messages()
-                .get(
-                    userId="me",
-                    id=gmail_msg_id,
-                    format="metadata",
-                    metadataHeaders=["Message-Id"],
+            try:
+                get_resp = (
+                    service.users()
+                    .messages()
+                    .get(
+                        userId="me",
+                        id=gmail_msg_id,
+                        format="metadata",
+                        metadataHeaders=["Message-Id"],
+                    )
+                    .execute(num_retries=3)
                 )
-                .execute(num_retries=3)
-            )
-            for header in get_resp.get("payload", {}).get("headers", []):
-                if header.get("name", "").lower() == "message-id":
-                    real_message_id = header["value"]
-                    break
+                for header in get_resp.get("payload", {}).get("headers", []):
+                    if header.get("name", "").lower() == "message-id":
+                        real_message_id = header["value"]
+                        break
+            except Exception:
+                log.warning(
+                    "Gmail messages.get enrichment failed after successful send "
+                    "(gmail_id=%s); using provisional Message-ID",
+                    gmail_msg_id,
+                    exc_info=True,
+                )
 
         _log_gmail_call(
             to_email,
@@ -745,18 +757,51 @@ def _send_via_gmail(
         )
         status_code = e.resp.status
         log.error("Gmail API error %s %s: %s", status_code, e.resp.reason, err_body)
+        reason = ""
+        try:
+            parsed = json.loads(err_body) if err_body else {}
+            errors = (parsed.get("error") or {}).get("errors") or []
+            if errors:
+                reason = str(errors[0].get("reason") or "")
+            if not reason:
+                reason = str((parsed.get("error") or {}).get("status") or "")
+        except Exception:
+            reason = ""
+        low = f"{err_body} {reason}".lower()
 
         # --- classify the error ---------------------------------------------------
-        # Permanent errors should NOT be retried — the lead's queue slots should
-        # be cleared and the lead marked appropriately.
         if status_code == 400:
-            # Bad request: typically invalid recipient, malformed message, or
-            # the message was rejected by Gmail (e.g. classified as spam).
+            # failedPrecondition / Mail service not enabled → sender auth, not recipient
+            if "failedprecondition" in low or "mail service not enabled" in low:
+                return SendFailure(
+                    error_type="auth_failed",
+                    message=f"Gmail rejected the message (400): {err_body[:300]}",
+                    http_status=400,
+                )
+            if "invalid to header" in low or "recipient address required" in low:
+                return SendFailure(
+                    error_type="invalid_recipient",
+                    message=f"Gmail rejected the message (400): {err_body[:300]}",
+                    http_status=400,
+                )
+            # Ambiguous 400 (spam/policy/content) — leave as bounce; classifier decides
             return SendFailure(
                 error_type="bounce",
                 message=f"Gmail rejected the message (400): {err_body[:300]}",
+                http_status=400,
             )
         if status_code in (401, 403):
+            # Quota / rate limits are transient — do not pause as auth
+            if any(
+                x in low
+                for x in (
+                    "ratelimitexceeded",
+                    "userratelimitexceeded",
+                    "dailylimitexceeded",
+                    "quotaexceeded",
+                )
+            ):
+                return None
             if retry_on_auth_fail and gmail_account and gmail_account.refresh_token:
                 _cid = google_client_id or settings.google_client_id
                 _csec = google_client_secret or settings.google_client_secret
@@ -780,19 +825,16 @@ def _send_via_gmail(
                         google_client_secret=google_client_secret,
                         retry_on_auth_fail=False,
                     )
-            # Auth / permission: token expired or account suspended.
             err_type = "auth_failed" if status_code == 401 else "permission_denied"
             return SendFailure(
                 error_type=err_type,
                 message=f"Gmail auth/permission error ({status_code}): {err_body[:300]}",
+                http_status=status_code,
             )
         if status_code == 404:
-            return SendFailure(
-                error_type="invalid_recipient",
-                message=f"Gmail 404 — user or resource not found: {err_body[:300]}",
-            )
-        # 429 / 5xx are transient (rate-limit or server issue) → return None so
-        # the caller can retry later.
+            # Stale thread / resource — not a recipient bounce
+            return None
+        # 429 / 5xx are transient
         return None
     except Exception as e:
         _log_gmail_call(
@@ -1146,12 +1188,29 @@ def _send_via_office365(
         )
         log.error("Office 365 Graph API error %s: %s", status_code, err_body[:300])
 
+        low = err_body.lower()
         if status_code == 400:
+            if "erroritemnotfound" in low or "mailboxnotenabledforrestapi" in low:
+                return None if "erroritemnotfound" in low else SendFailure(
+                    error_type="auth_failed",
+                    message=f"Microsoft rejected the message (400): {err_body[:300]}",
+                    http_status=400,
+                )
             return SendFailure(
                 error_type="bounce",
                 message=f"Microsoft rejected the message (400): {err_body[:300]}",
+                http_status=400,
             )
         if status_code in (401, 403):
+            if any(
+                x in low
+                for x in (
+                    "applicationthrottled",
+                    "errorsubmissionquotaexceeded",
+                    "mailboxssimultaneoussubmitlimit",
+                )
+            ):
+                return None
             if retry_on_auth_fail and office365_account.refresh_token:
                 _cid = office365_client_id or settings.office365_client_id
                 _csec = office365_client_secret or settings.office365_client_secret
@@ -1181,12 +1240,10 @@ def _send_via_office365(
             return SendFailure(
                 error_type=err_type,
                 message=f"Microsoft auth/permission error ({status_code}): {err_body[:300]}",
+                http_status=status_code,
             )
         if status_code == 404:
-            return SendFailure(
-                error_type="invalid_recipient",
-                message=f"Microsoft 404 — resource not found: {err_body[:300]}",
-            )
+            return None
         # 429 / 5xx are transient
         return None
     except Exception as e:
@@ -1325,35 +1382,55 @@ def _send_via_smtp(
     except smtplib.SMTPRecipientsRefused as e:
         err = str(e)[:300]
         _log_smtp_call(to_email, from_email, subject, thread_id=thread_key, status="ERROR", error=err)
-        # Recipient-level rejection — a bad lead address, not a broken inbox.
-        # Do NOT record it as an inbox send failure (that would flip the inbox
-        # health to "failing" and can trip the repeated-failure alert).
-        return SendFailure(error_type="invalid_recipient", message=f"SMTP recipient refused: {err}")
+        # RCPT 4xx (greylist etc.) is transient; 5xx is permanent recipient/policy.
+        codes = []
+        try:
+            for _addr, (code, _msg) in (e.recipients or {}).items():
+                codes.append(int(code))
+        except Exception:
+            pass
+        if codes and all(400 <= c < 500 for c in codes):
+            return None
+        return SendFailure(
+            error_type="invalid_recipient",
+            message=f"SMTP recipient refused: {err}",
+            smtp_stage="rcpt",
+        )
     except smtplib.SMTPSenderRefused as e:
         err = str(e)[:300]
         _log_smtp_call(to_email, from_email, subject, thread_id=thread_key, status="ERROR", error=err)
-        # Sender-side failure (bad envelope auth, relay policy, MAIL FROM rejected) —
-        # NOT a recipient bounce. jobs.py handles "auth_failed" by pausing the inbox
-        # instead of marking leads as bounced (which would irreversibly poison the
-        # campaign when only the relay configuration is broken).
+        code = getattr(e, "smtp_code", 0) or 0
+        if 400 <= code < 500:
+            _record_smtp_failure(smtp_account, f"SMTP sender refused (transient {code}): {err}")
+            return None
         _record_smtp_failure(smtp_account, f"SMTP sender refused: {err}")
-        return SendFailure(error_type="auth_failed", message=f"SMTP sender refused: {err}")
+        return SendFailure(
+            error_type="auth_failed",
+            message=f"SMTP sender refused: {err}",
+            smtp_stage="mail",
+        )
     except smtplib.SMTPDataError as e:
         err = str(e)[:300]
         _log_smtp_call(to_email, from_email, subject, thread_id=thread_key, status="ERROR", error=err)
-        # 5xx at DATA time is a permanent rejection (content/policy); 4xx is transient.
+        # 5xx at DATA is content/policy — never auto-recipient unless classifier finds user-unknown.
         code = getattr(e, "smtp_code", 0) or 0
         if 500 <= code < 600:
-            # Per-message content/policy rejection — not proof the inbox itself
-            # is broken, so don't mark the whole inbox failing.
-            return SendFailure(error_type="bounce", message=f"SMTP rejected the message ({code}): {err}")
+            return SendFailure(
+                error_type="bounce",
+                message=f"SMTP rejected the message ({code}): {err}",
+                smtp_stage="data",
+            )
         _record_smtp_failure(smtp_account, f"SMTP DATA error ({code}): {err}")
         return None
     except smtplib.SMTPAuthenticationError as e:
         err = str(e)[:300]
         _log_smtp_call(to_email, from_email, subject, thread_id=thread_key, status="ERROR", error=err)
         _record_smtp_failure(smtp_account, f"SMTP authentication failed: {err}")
-        return SendFailure(error_type="auth_failed", message=f"SMTP authentication failed: {err}")
+        return SendFailure(
+            error_type="auth_failed",
+            message=f"SMTP authentication failed: {err}",
+            smtp_stage="auth",
+        )
     except (smtplib.SMTPException, socket.error, OSError) as e:
         _log_smtp_call(to_email, from_email, subject, thread_id=thread_key, status="ERROR", error=str(e)[:300])
         log.error("SMTP send error: %s", e)

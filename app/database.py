@@ -216,7 +216,50 @@ async def _run_migrations(conn) -> None:
         # view and quoted follow-ups reproduce what was actually sent even when
         # the template uses {{random: ...}} (which cannot be re-derived later).
         "ALTER TABLE email_log ADD COLUMN IF NOT EXISTS body TEXT NULL",
+        # Pause watermarks for bounce auto-pause (count failures only since last resume)
+        "ALTER TABLE campaign ADD COLUMN IF NOT EXISTS bounce_pause_watermark TIMESTAMP WITHOUT TIME ZONE NULL",
+        "ALTER TABLE inbox ADD COLUMN IF NOT EXISTS bounce_pause_watermark TIMESTAMP WITHOUT TIME ZONE NULL",
+        "ALTER TABLE queue_slot ADD COLUMN IF NOT EXISTS attempt_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE queue_slot ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMP WITHOUT TIME ZONE NULL",
     ]
+    # delivery_failure table (IF NOT EXISTS — separate stmt like custom_email_override)
+    await conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS delivery_failure (
+                id SERIAL PRIMARY KEY,
+                campaign_id INTEGER REFERENCES campaign(id) ON DELETE SET NULL,
+                lead_id INTEGER REFERENCES lead(id) ON DELETE SET NULL,
+                inbox_id INTEGER REFERENCES inbox(id) ON DELETE SET NULL,
+                sequence_index INTEGER,
+                kind VARCHAR(32) NOT NULL DEFAULT 'recipient',
+                failure_class VARCHAR(64) NOT NULL DEFAULT 'unknown_permanent',
+                source VARCHAR(32) NOT NULL DEFAULT 'smtp',
+                error_type VARCHAR(64) NOT NULL DEFAULT '',
+                error_message TEXT NOT NULL DEFAULT '',
+                to_email VARCHAR(255) NOT NULL DEFAULT '',
+                recipient_domain VARCHAR(255) NOT NULL DEFAULT '',
+                dedupe_key VARCHAR(255),
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            )
+            """
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_delivery_failure_campaign_kind_created ON delivery_failure (campaign_id, kind, created_at)"
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_delivery_failure_inbox_kind_created ON delivery_failure (inbox_id, kind, created_at)"
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_delivery_failure_dedupe ON delivery_failure (dedupe_key)"
+        )
+    )
     # custom_email_override table (IF NOT EXISTS — must be a separate stmt
     # because it uses raw SQL, not ALTER TABLE)
     await conn.execute(

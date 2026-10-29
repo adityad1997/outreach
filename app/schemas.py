@@ -187,6 +187,13 @@ class InboxResponse(BaseModel):
     health: Optional[str] = None
     last_send_error: str = ""
     last_send_at: Optional[datetime] = None
+    # Sending Health — last 14 days bounce metrics
+    health_window_days: int = 14
+    sent_14d: int = 0
+    recipient_bounces_14d: int = 0
+    sender_bounces_14d: int = 0
+    bounce_rate_14d: float = 0.0  # recipient %
+    sender_bounce_rate_14d: float = 0.0
 
     class Config:
         from_attributes = True
@@ -374,6 +381,15 @@ class CampaignStats(BaseModel):
     open_rate: float = 0.0
     click_rate: float = 0.0
     needs_custom_email: int = 0
+    # Pipeline enrollment counts (leads currently marked bounced/unsubscribed)
+    bounced: int = 0
+    unsubscribed: int = 0
+    # Classified delivery-failure metrics (Smartlead-style)
+    recipient_bounces: int = 0
+    sender_bounces: int = 0
+    send_attempts: int = 0
+    recipient_bounce_rate: float = 0.0  # percent 0–100
+    sender_bounce_rate: float = 0.0    # percent 0–100
 
     class Config:
         from_attributes = True

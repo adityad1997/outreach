@@ -94,6 +94,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const applySession = useCallback(async (accessToken) => {
+    if (!accessToken) {
+      throw new Error('No access token');
+    }
+    setAccessToken(accessToken);
+    const userRes = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!userRes.ok) {
+      setAccessToken(null);
+      setUser(null);
+      throw new Error('Could not load user session');
+    }
+    setUser(await userRes.json());
+    await checkSetup();
+  }, [checkSetup]);
+
   // On mount: check setup status, try refresh from httpOnly cookie
   useEffect(() => {
     (async () => {
@@ -120,6 +137,7 @@ export function AuthProvider({ children }) {
       logout,
       refreshToken,
       checkSetup,
+      applySession,
     }}>
       {children}
     </AuthContext.Provider>

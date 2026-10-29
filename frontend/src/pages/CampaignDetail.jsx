@@ -38,6 +38,7 @@ const TAB_LABELS = {
   queue: 'Queue',
   settings: 'Settings',
 };
+const CAMPAIGN_LEADS_PAGE_SIZE = 100;
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function CampaignDetail() {
@@ -50,7 +51,7 @@ export default function CampaignDetail() {
   const [leadsTotal, setLeadsTotal] = useState(0);
   const [leadsHasMore, setLeadsHasMore] = useState(false);
   const [leadsSearch, setLeadsSearch] = useState("");
-  const LEADS_PAGE_SIZE = 100;
+  const LEADS_PAGE_SIZE = CAMPAIGN_LEADS_PAGE_SIZE;
   const [queueData, setQueueData] = useState(() => apiCache.get(`/campaigns/${id}/queue`) || []);
   const [sentData, setSentData] = useState(() => apiCache.get(`/campaigns/${id}/sent`) || []);
   const [queueFilter, setQueueFilter] = useState(null);
@@ -910,7 +911,15 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
           </Button>
         )}
         <span className="text-xs text-gray-400 ml-1">
-          {filteredLeads.length}{hasActiveFilter ? `/${leads.length}` : ''} lead{filteredLeads.length !== 1 ? 's' : ''}
+          {leadsTotal === 0
+            ? 'No leads'
+            : hasActiveFilter
+              ? `${filteredLeads.length} of ${leads.length} on this page · ${leadsTotal.toLocaleString()} total`
+              : (() => {
+                  const start = (leadsPage - 1) * CAMPAIGN_LEADS_PAGE_SIZE + 1;
+                  const end = Math.min(leadsPage * CAMPAIGN_LEADS_PAGE_SIZE, leadsTotal);
+                  return `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${leadsTotal.toLocaleString()} lead${leadsTotal !== 1 ? 's' : ''}`;
+                })()}
         </span>
         {hasActiveFilter && (
           <button
@@ -1387,7 +1396,9 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
       {leadsTotal > 0 && (
         <div className="flex items-center justify-center gap-3 py-4">
           <Button size="sm" variant="outline" disabled={leadsPage <= 1} onClick={() => onLeadsPageChange?.(leadsPage - 1)}>Previous</Button>
-          <span className="text-xs text-gray-400">Page {leadsPage} / {Math.ceil(leadsTotal / 100)} · {leadsTotal} leads</span>
+          <span className="text-xs text-gray-400">
+            Page {leadsPage} of {Math.max(1, Math.ceil(leadsTotal / CAMPAIGN_LEADS_PAGE_SIZE))} · {leadsTotal.toLocaleString()} total
+          </span>
           <Button size="sm" variant="outline" disabled={!leadsHasMore} onClick={() => onLeadsPageChange?.(leadsPage + 1)}>Next</Button>
         </div>
       )}

@@ -135,6 +135,8 @@ export default function Campaigns() {
                 <th>Status</th>
                 <th className="text-center">Progress</th>
                 <th className="text-center">Replies</th>
+                <th className="text-center" title="Recipient hard bounces (invalid address)">Bounced</th>
+                <th className="text-center" title="Sender-side failures (auth, policy, reputation)">Sender Bounced</th>
                 <th></th>
               </tr>
             </thead>
@@ -155,6 +157,11 @@ export default function Campaigns() {
                 const percent = denom > 0 ? Math.round((emailsSent / denom) * 100) : 0;
                 const replies = stats.replies || 0;
                 const replyRate = emailsSent > 0 ? Math.round((replies / emailsSent) * 100) : 0;
+                const recipientBounces = stats.recipient_bounces || 0;
+                const senderBounces = stats.sender_bounces || 0;
+                const recipientBounceRate = stats.recipient_bounce_rate || 0;
+                const senderBounceRate = stats.sender_bounce_rate || 0;
+                const bounceWarn = recipientBounceRate >= 2;
 
                 // Determine campaign state for display
                 // When paused: scheduled slots were cleared, so denom == emailsSent
@@ -260,6 +267,17 @@ export default function Campaigns() {
                     </td>
                     <td className="py-2 text-center">
                       {replies} ({replyRate}%)
+                    </td>
+                    <td className="py-2 text-center" title="Recipient bounce rate over send attempts">
+                      <span className={bounceWarn ? 'text-amber-700 font-medium' : ''}>
+                        {recipientBounces}
+                        {stats.send_attempts > 0 ? ` (${recipientBounceRate}%)` : ''}
+                        {bounceWarn ? ' ⚠' : ''}
+                      </span>
+                    </td>
+                    <td className="py-2 text-center" title="Sender bounce rate over send attempts">
+                      {senderBounces}
+                      {stats.send_attempts > 0 ? ` (${senderBounceRate}%)` : ''}
                     </td>
                     <td className="py-2">
                       <div className="flex flex-wrap gap-2">

@@ -561,8 +561,19 @@ export default function Leads() {
 
       <Card className="overflow-x-auto max-w-full min-w-0">
         <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100">
-          {leads.length} lead{leads.length !== 1 ? 's' : ''}
-          {tab === TAB_BOUNCED ? ' (bounced or invalid)' : ''}
+          {leadsTotal === 0
+            ? 'No leads'
+            : (() => {
+                const start = (leadsPage - 1) * LEADS_PAGE_SIZE + 1;
+                const end = Math.min(leadsPage * LEADS_PAGE_SIZE, leadsTotal);
+                return (
+                  <>
+                    Showing {start.toLocaleString()}–{end.toLocaleString()} of{' '}
+                    {leadsTotal.toLocaleString()} lead{leadsTotal !== 1 ? 's' : ''}
+                    {tab === TAB_BOUNCED ? ' (bounced or invalid)' : ''}
+                  </>
+                );
+              })()}
         </div>
         {pageFullySelected && !allSelected && (
           <div className="mx-4 mt-3 flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm">
@@ -738,7 +749,8 @@ export default function Leads() {
               Previous
             </Button>
             <span className="text-xs text-gray-500">
-              Page {leadsPage} / {Math.ceil(leadsTotal / LEADS_PAGE_SIZE)} · {leadsTotal.toLocaleString()} leads
+              Page {leadsPage} of {Math.max(1, Math.ceil(leadsTotal / LEADS_PAGE_SIZE))} ·{' '}
+              {leadsTotal.toLocaleString()} total
             </span>
             <Button
               size="sm"

@@ -31,6 +31,7 @@ const SETTINGS_TABS = [
 const SECTIONS_BY_TAB = {
   general: [
     { id: 'scheduling', label: 'Scheduling' },
+    { id: 'bounce-autopause', label: 'Bounce auto-pause' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'account', label: 'Account & Security' },
     { id: 'known-ips', label: 'Known IPs' },
@@ -113,6 +114,12 @@ export default function Settings() {
   const [strategy, setStrategy] = useState('priority');
   const [testMode, setTestMode] = useState(false);
   const [telemetryEnabled, setTelemetryEnabled] = useState(true);
+  const [bounceAutopause, setBounceAutopause] = useState({
+    enabled: true,
+    threshold_pct: 5,
+    min_attempts: 200,
+    warn_threshold_pct: 2,
+  });
   // Hub version + announcement feeds (the same GET /api/notices the floating
   // notice card reads) — the permanent Settings › About home.
   const [notices, setNotices] = useState(() => apiCache.get('/notices') || null);
@@ -307,7 +314,7 @@ export default function Settings() {
   /* ── load data ── */
   const loadAll = useCallback(async () => {
     try {
-      const [stratData, tmData, whList, evtData, aiData, provData, ipData, keysData, notifData, gmailSyncData, mcpData, telData, noticesData] = await Promise.all([
+      const [stratData, tmData, whList, evtData, aiData, provData, ipData, keysData, notifData, gmailSyncData, mcpData, telData, noticesData, bounceData] = await Promise.all([
         api.get('/settings/scheduling-strategy'),
         api.get('/settings/test-mode'),
         api.get('/settings/webhooks'),
@@ -321,10 +328,19 @@ export default function Settings() {
         api.get('/settings/mcp-setup').catch(() => null),
         api.get('/settings/telemetry').catch(() => null),
         api.get('/notices').catch(() => null),
+        api.get('/settings/bounce-autopause').catch(() => null),
       ]);
       setStrategy(stratData.scheduling_strategy || 'priority');
       setTestMode(tmData.test_mode || false);
       if (telData) setTelemetryEnabled(telData.telemetry_enabled !== false);
+      if (bounceData) {
+        setBounceAutopause({
+          enabled: bounceData.enabled !== false,
+          threshold_pct: bounceData.threshold_pct ?? 5,
+          min_attempts: bounceData.min_attempts ?? 200,
+          warn_threshold_pct: bounceData.warn_threshold_pct ?? 2,
+        });
+      }
       if (noticesData) setNotices(noticesData);
       setWebhooks(whList || []);
       setEventTypes(evtData.events || []);
@@ -524,6 +540,27 @@ export default function Settings() {
       await api.post('/settings/scheduling-strategy', { scheduling_strategy: val });
       setStrategy(val);
       notify({ type: 'success', message: 'Strategy saved' });
+    } catch (e) { notify({ type: 'error', message: e.message }); }
+  };
+
+  /* ── bounce auto-pause ── */
+  const submitBounceAutopause = async (patch) => {
+    const next = { ...bounceAutopause, ...patch };
+    setBounceAutopause(next);
+    try {
+      const data = await api.post('/settings/bounce-autopause', {
+        enabled: next.enabled,
+        threshold_pct: Number(next.threshold_pct),
+        min_attempts: Number(next.min_attempts),
+        warn_threshold_pct: Number(next.warn_threshold_pct),
+      });
+      setBounceAutopause({
+        enabled: data.enabled !== false,
+        threshold_pct: data.threshold_pct ?? 5,
+        min_attempts: data.min_attempts ?? 200,
+        warn_threshold_pct: data.warn_threshold_pct ?? 2,
+      });
+      notify({ type: 'success', message: 'Bounce auto-pause saved' });
     } catch (e) { notify({ type: 'error', message: e.message }); }
   };
 
@@ -908,6 +945,60 @@ export default function Settings() {
                   Inbox capacity divided evenly across active campaigns.
                 </span>
               </span>
+            </label>
+          </div>
+        </section>
+
+        <section id="settings-bounce-autopause" className="mb-10 scroll-mt-6">
+          <h2 className="text-lg font-semibold mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">Bounce auto-pause</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Pause a campaign when recipient bounce rate is high; pause an inbox when sender bounce rate is high.
+            Defaults match common cold-email practice (5% after 200 attempts). Soft UI warning at 2% recipient bounce.
+          </p>
+          <label className="flex items-center gap-2 mb-4">
+            <input
+              type="checkbox"
+              checked={!!bounceAutopause.enabled}
+              onChange={e => submitBounceAutopause({ enabled: e.target.checked })}
+            />
+            <span className="text-sm">Enabled</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+            <label className="text-sm space-y-1">
+              <span className="text-xs text-gray-500">Pause threshold (%)</span>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                className="w-full border rounded px-2 py-1.5 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
+                value={bounceAutopause.threshold_pct}
+                onChange={e => setBounceAutopause(b => ({ ...b, threshold_pct: e.target.value }))}
+                onBlur={() => submitBounceAutopause({})}
+              />
+            </label>
+            <label className="text-sm space-y-1">
+              <span className="text-xs text-gray-500">Min send attempts</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                className="w-full border rounded px-2 py-1.5 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
+                value={bounceAutopause.min_attempts}
+                onChange={e => setBounceAutopause(b => ({ ...b, min_attempts: e.target.value }))}
+                onBlur={() => submitBounceAutopause({})}
+              />
+            </label>
+            <label className="text-sm space-y-1">
+              <span className="text-xs text-gray-500">Warn at (%)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                className="w-full border rounded px-2 py-1.5 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
+                value={bounceAutopause.warn_threshold_pct}
+                onChange={e => setBounceAutopause(b => ({ ...b, warn_threshold_pct: e.target.value }))}
+                onBlur={() => submitBounceAutopause({})}
+              />
             </label>
           </div>
         </section>

@@ -120,6 +120,8 @@ class Inbox(Base):
     ramp_up_started_at = Column(DateTime, nullable=True, default=None)  # when ramp-up was (last) enabled
     paused = Column(Boolean, default=False, nullable=False)
     ramp_up_paused_at = Column(DateTime, nullable=True, default=None)  # when ramp-up was paused (for freezing warm-up)
+    # Failures before this timestamp are ignored by bounce auto-pause (set on resume)
+    bounce_pause_watermark = Column(DateTime, nullable=True, default=None)
     campaign_inboxes = relationship("CampaignInbox", back_populates="inbox")
     gmail_account = relationship("GmailAccount", back_populates="inbox", uselist=False, cascade="all, delete-orphan")
     gmail_sync_state = relationship("GmailSyncState", uselist=False, cascade="all, delete-orphan")
@@ -190,6 +192,8 @@ class Campaign(Base):
     # emails are written; asap = start sending each personalized email as soon as it's written
     custom_sequence_mode = Column(String(32), default="wait_for_all", nullable=False)
     created_at = Column(DateTime, default=_utcnow)
+    # Failures before this timestamp are ignored by bounce auto-pause (set on resume)
+    bounce_pause_watermark = Column(DateTime, nullable=True, default=None)
     campaign_inboxes = relationship(
         "CampaignInbox",
         back_populates="campaign",
@@ -340,6 +344,9 @@ class QueueSlot(Base):
     variant_id = Column(
         Integer, ForeignKey("sequence_variant.id", ondelete="SET NULL"), nullable=True, default=None
     )
+    # Soft/transient retry backoff (permanent failures delete the slot)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    next_attempt_at = Column(DateTime, nullable=True, default=None)
     campaign_lead = relationship("CampaignLead", back_populates="queue_slots")
     inbox = relationship("Inbox")
     variant = relationship("SequenceVariant", foreign_keys=[variant_id])
@@ -403,6 +410,36 @@ class EmailLog(Base):
         back_populates="email_log",
         cascade="all, delete-orphan",
     )
+
+
+class DeliveryFailure(Base):
+    """Durable record of a classified send/NDR failure (EmailLog is deleted on failure).
+
+    ``kind``:
+      - recipient — lead/address problem (counts toward Bounced %)
+      - sender — mailbox/domain/auth/policy (counts toward Sender Bounced %)
+      - other — content/soft/unknown-non-counting (audit only)
+    """
+    __tablename__ = "delivery_failure"
+    __table_args__ = (
+        Index("ix_delivery_failure_campaign_kind_created", "campaign_id", "kind", "created_at"),
+        Index("ix_delivery_failure_inbox_kind_created", "inbox_id", "kind", "created_at"),
+        Index("ix_delivery_failure_dedupe", "dedupe_key", unique=True),
+    )
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("campaign.id", ondelete="SET NULL"), nullable=True)
+    lead_id = Column(Integer, ForeignKey("lead.id", ondelete="SET NULL"), nullable=True)
+    inbox_id = Column(Integer, ForeignKey("inbox.id", ondelete="SET NULL"), nullable=True)
+    sequence_index = Column(Integer, nullable=True)
+    kind = Column(String(32), nullable=False, default="recipient")  # recipient | sender | other
+    failure_class = Column(String(64), nullable=False, default="unknown_permanent")
+    source = Column(String(32), nullable=False, default="smtp")  # smtp | gmail | office365 | ndr
+    error_type = Column(String(64), nullable=False, default="")
+    error_message = Column(Text, nullable=False, default="")
+    to_email = Column(String(255), nullable=False, default="")
+    recipient_domain = Column(String(255), nullable=False, default="")
+    dedupe_key = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class LeadUnsubscribeToken(Base):
@@ -950,7 +987,7 @@ WEBHOOK_EVENT_TYPES = [
     "email.sent",          # An email was successfully sent to a lead
     "email.opened",        # A lead opened an email (tracking pixel loaded)
     "email.clicked",       # A lead clicked a link in an email
-    "email.bounced",       # An email bounced (permanent delivery failure)
+    "email.bounced",       # Recipient-hard bounce (invalid address / user unknown)
     "lead.replied",        # A lead replied to a campaign email
     "lead.unsubscribed",   # A lead clicked the unsubscribe link
     "lead.status_changed", # A lead's status was changed (any status transition)
@@ -963,4 +1000,6 @@ WEBHOOK_EVENT_TYPES = [
     "rate_limit",          # A rate limit violation was detected
     "token_expired",       # OAuth refresh or SMTP/IMAP login failed (see data.provider/error_type)
     "inbox.send_failing",  # An SMTP inbox failed to send repeatedly (see data.last_send_error)
+    "campaign.bounce_autopause",  # Campaign paused after high recipient bounce rate
+    "inbox.bounce_autopause",     # Inbox paused after high sender bounce rate
 ]

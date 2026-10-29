@@ -260,6 +260,11 @@ async def list_campaigns(db: AsyncSession = Depends(get_db)):
             stats["open_rate"] = stats.get("open_rate", 0)
             stats["click_rate"] = stats.get("click_rate", 0)
 
+    from app.delivery_failures import campaign_bounce_stats
+    bounce_map = await campaign_bounce_stats(db, [c.id for c in campaigns])
+    for cid, bstats in bounce_map.items():
+        stats_map.setdefault(cid, {}).update(bstats)
+
     return [
         _campaign_to_response(c, inbox_map.get(c.id, []), stats_map.get(c.id))
         for c in campaigns
@@ -536,6 +541,10 @@ async def update_campaign(
         old_paused = campaign.paused
         campaign.paused = data.paused
         if old_paused != data.paused:
+            # On resume, watermark so auto-pause only counts new failures
+            if old_paused and not data.paused:
+                from app.time import utcnow as _utcnow
+                campaign.bounce_pause_watermark = _utcnow()
             # run a full recalculation so that paused campaigns drop out of the
             # schedule (or are added back when resumed) and other campaigns can
             # move into the newly freed capacity.  Using the global routine is

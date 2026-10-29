@@ -1078,60 +1078,21 @@ async def _upsert_message_from_gmail(
             if not subject_hdr or _BOUNCE_SUBJECT_RE.search(subject_hdr):
                 bounced_addr = _extract_bounced_recipient(body_plain, body_html, snippet)
                 if bounced_addr:
-                    b_lead_res = await db.execute(
-                        select(Lead).where(func.lower(Lead.email) == bounced_addr)
-                    )
-                    b_lead = b_lead_res.scalar_one_or_none()
-                    if b_lead is not None:
-                        b_rows = (
-                            await db.execute(
-                                select(CampaignLead).where(CampaignLead.lead_id == b_lead.id)
-                            )
-                        ).scalars().all()
-                        if any(
-                            getattr(r, "enrollment_status", None) not in ("bounced", "unsubscribed")
-                            for r in b_rows
-                        ):
-                            log.info(
-                                "NDR bounce detected for lead_id=%s email=%s (inbox_id=%s)",
-                                b_lead.id, bounced_addr, inbox_id,
-                            )
-                            for _bcl in b_rows:
-                                _bcl.enrollment_status = "bounced"
-                            b_cl_ids = [r.id for r in b_rows]
-                            if b_cl_ids:
-                                await db.execute(
-                                    delete(QueueSlot).where(
-                                        QueueSlot.campaign_lead_id.in_(b_cl_ids)
-                                    )
-                                )
-                            await db.flush()
-                            b_camp_ids = list({r.campaign_id for r in b_rows})
-                            for b_camp_id in b_camp_ids:
-                                try:
-                                    from app.webhooks import fire_webhook_event as _fwe
-                                    await _fwe(db, "email.bounced", {
-                                        "lead_id": b_lead.id,
-                                        "lead_email": b_lead.email,
-                                        "campaign_id": b_camp_id,
-                                        "inbox_id": inbox_id,
-                                        "error_type": "bounce",
-                                        "error_message": snippet[:300] or subject_hdr,
-                                        "timestamp": time_provider.utcnow().isoformat() + "Z",
-                                    })
-                                    await _fwe(db, "lead.status_changed", {
-                                        "lead_id": b_lead.id,
-                                        "lead_email": b_lead.email,
-                                        "campaign_id": b_camp_id,
-                                        "old_enrollment_status": "contacted",
-                                        "new_enrollment_status": "bounced",
-                                        "reason": f"NDR from {from_addr_ndr}",
-                                        "timestamp": time_provider.utcnow().isoformat() + "Z",
-                                    })
-                                except Exception:
-                                    log.exception(
-                                        "Failed to fire bounce webhook for lead_id=%s", b_lead.id
-                                    )
+                    try:
+                        from app.delivery_failures import handle_ndr_bounce
+                        from app.webhooks import fire_webhook_event as _fwe
+                        await handle_ndr_bounce(
+                            db,
+                            bounced_addr=bounced_addr,
+                            inbox_id=inbox_id,
+                            subject=subject_hdr or "",
+                            body=snippet or body_plain or body_html or "",
+                            fire_webhook_event=_fwe,
+                        )
+                    except Exception:
+                        log.exception(
+                            "Failed to process NDR bounce for %s", bounced_addr
+                        )
     # -----------------------------------------------------------------------
 
     # ---------- Sent-to-lead detection (outbound messages only) ----------
@@ -1665,49 +1626,19 @@ async def _process_smtp_inbound_message(
                 parsed.get("body_plain", ""), parsed.get("body_html", ""), parsed.get("snippet", "")
             )
             if bounced_addr:
-                b_lead_res = await db.execute(select(Lead).where(func.lower(Lead.email) == bounced_addr))
-                b_lead = b_lead_res.scalar_one_or_none()
-                if b_lead is not None:
-                    b_rows = (
-                        await db.execute(select(CampaignLead).where(CampaignLead.lead_id == b_lead.id))
-                    ).scalars().all()
-                    if any(
-                        getattr(r, "enrollment_status", None) not in ("bounced", "unsubscribed")
-                        for r in b_rows
-                    ):
-                        log.info(
-                            "SMTP NDR bounce detected for lead_id=%s email=%s (inbox_id=%s)",
-                            b_lead.id, bounced_addr, inbox.id,
-                        )
-                        for _bcl in b_rows:
-                            _bcl.enrollment_status = "bounced"
-                        b_cl_ids = [r.id for r in b_rows]
-                        if b_cl_ids:
-                            await db.execute(delete(QueueSlot).where(QueueSlot.campaign_lead_id.in_(b_cl_ids)))
-                        await db.flush()
-                        for b_camp_id in list({r.campaign_id for r in b_rows}):
-                            try:
-                                from app.webhooks import fire_webhook_event as _fwe
-                                await _fwe(db, "email.bounced", {
-                                    "lead_id": b_lead.id,
-                                    "lead_email": b_lead.email,
-                                    "campaign_id": b_camp_id,
-                                    "inbox_id": inbox.id,
-                                    "error_type": "bounce",
-                                    "error_message": (parsed.get("snippet", "") or subject_hdr)[:300],
-                                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                                })
-                                await _fwe(db, "lead.status_changed", {
-                                    "lead_id": b_lead.id,
-                                    "lead_email": b_lead.email,
-                                    "campaign_id": b_camp_id,
-                                    "old_enrollment_status": "contacted",
-                                    "new_enrollment_status": "bounced",
-                                    "reason": f"NDR from {from_addr}",
-                                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                                })
-                            except Exception:
-                                log.exception("Failed to fire SMTP bounce webhook for lead_id=%s", b_lead.id)
+                try:
+                    from app.delivery_failures import handle_ndr_bounce
+                    from app.webhooks import fire_webhook_event as _fwe
+                    await handle_ndr_bounce(
+                        db,
+                        bounced_addr=bounced_addr,
+                        inbox_id=inbox.id,
+                        subject=subject_hdr,
+                        body=parsed.get("snippet", "") or parsed.get("body_plain", "") or "",
+                        fire_webhook_event=_fwe,
+                    )
+                except Exception:
+                    log.exception("Failed to process SMTP NDR bounce for %s", bounced_addr)
             await db.flush()
             return row, True, (inbox.id, thread_key)
 
@@ -3969,62 +3900,19 @@ async def _detect_o365_lead_replies(
         if not bounced_addr:
             continue
 
-        b_lead_res = await db.execute(
-            select(Lead).where(func.lower(Lead.email) == bounced_addr)
-        )
-        b_lead = b_lead_res.scalar_one_or_none()
-        if b_lead is None:
-            continue
-        b_rows_o365 = (
-            await db.execute(select(CampaignLead).where(CampaignLead.lead_id == b_lead.id))
-        ).scalars().all()
-        if not b_rows_o365 or all(
-            getattr(r, "enrollment_status", None) in ("bounced", "unsubscribed")
-            for r in b_rows_o365
-        ):
-            continue
-
-        log.info(
-            "O365 NDR bounce detected for lead_id=%s email=%s (inbox_id=%s)",
-            b_lead.id, bounced_addr, inbox.id,
-        )
-        for _bcl in b_rows_o365:
-            _bcl.enrollment_status = "bounced"
-        b_cl_ids = [r.id for r in b_rows_o365]
-        if b_cl_ids:
-            await db.execute(
-                delete(QueueSlot).where(QueueSlot.campaign_lead_id.in_(b_cl_ids))
+        try:
+            from app.delivery_failures import handle_ndr_bounce
+            from app.webhooks import fire_webhook_event as _fwe
+            await handle_ndr_bounce(
+                db,
+                bounced_addr=bounced_addr,
+                inbox_id=inbox.id,
+                subject=subject_ndr,
+                body=body_plain_ndr or body_html_ndr or "",
+                fire_webhook_event=_fwe,
             )
-        await db.flush()
-
-        b_camp_res = await db.execute(
-            select(CampaignLead.campaign_id).where(
-                CampaignLead.lead_id == b_lead.id
-            ).distinct()
-        )
-        for (b_camp_id,) in b_camp_res.all():
-            try:
-                from app.webhooks import fire_webhook_event as _fwe
-                await _fwe(db, "email.bounced", {
-                    "lead_id": b_lead.id,
-                    "lead_email": b_lead.email,
-                    "campaign_id": b_camp_id,
-                    "inbox_id": inbox.id,
-                    "error_type": "bounce",
-                    "error_message": subject_ndr[:300],
-                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                })
-                await _fwe(db, "lead.status_changed", {
-                    "lead_id": b_lead.id,
-                    "lead_email": b_lead.email,
-                    "campaign_id": b_camp_id,
-                    "old_enrollment_status": "active",
-                    "new_enrollment_status": "bounced",
-                    "reason": f"NDR from {from_addr_ndr}",
-                    "timestamp": time_provider.utcnow().isoformat() + "Z",
-                })
-            except Exception:
-                log.exception("Failed to fire bounce webhook for lead_id=%s", b_lead.id)
+        except Exception:
+            log.exception("Failed to process O365 NDR bounce for %s", bounced_addr)
 
 
 async def _detect_o365_sent_to_lead(

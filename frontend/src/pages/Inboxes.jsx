@@ -212,6 +212,96 @@ function jitterSecondsFromInputMinutes(minVal) {
   return clampJitterSeconds(Math.min(JITTER_MAX_MINUTES, v) * 60);
 }
 
+const PROVIDER_META = {
+  gmail: {
+    label: 'Gmail',
+    short: 'G',
+    chip: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200/80',
+    avatar: 'bg-rose-600',
+  },
+  office365: {
+    label: 'Outlook',
+    short: 'O',
+    chip: 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200/80',
+    avatar: 'bg-sky-600',
+  },
+  smtp: {
+    label: 'SMTP',
+    short: 'S',
+    chip: 'bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200/80',
+    avatar: 'bg-teal-600',
+  },
+};
+
+function providerMeta(provider) {
+  return PROVIDER_META[provider] || PROVIDER_META.gmail;
+}
+
+function inboxStatusInfo(inbox, expired) {
+  if (expired) {
+    return { key: 'expired', label: 'Token expired', tone: 'danger', dot: 'bg-red-500' };
+  }
+  if (inbox.paused) {
+    return { key: 'paused', label: 'Paused', tone: 'warn', dot: 'bg-amber-500' };
+  }
+  if (inbox.health === 'failing') {
+    return { key: 'failing', label: 'Failing', tone: 'danger', dot: 'bg-red-500' };
+  }
+  if (inbox.provider === 'smtp' && inbox.health === 'unknown') {
+    return { key: 'unknown', label: 'Unverified', tone: 'muted', dot: 'bg-gray-400' };
+  }
+  return { key: 'active', label: 'Active', tone: 'ok', dot: 'bg-emerald-500' };
+}
+
+function healthTone(bounceRate, senderRate) {
+  if ((bounceRate || 0) >= 5 || (senderRate || 0) >= 5) {
+    return { text: 'text-red-700', bar: 'bg-red-500', bg: 'bg-red-50', ring: 'ring-red-100' };
+  }
+  if ((bounceRate || 0) >= 2) {
+    return { text: 'text-amber-700', bar: 'bg-amber-500', bg: 'bg-amber-50', ring: 'ring-amber-100' };
+  }
+  return { text: 'text-emerald-700', bar: 'bg-emerald-500', bg: 'bg-emerald-50', ring: 'ring-emerald-100' };
+}
+
+function StatusPill({ status }) {
+  const styles = {
+    ok: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/80',
+    warn: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200/80',
+    danger: 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200/80',
+    muted: 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200/80',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md ${styles[status.tone] || styles.muted}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} aria-hidden />
+      {status.label}
+    </span>
+  );
+}
+
+function QuotaBar({ sent, max, className = '', showLabel = false, wide = false }) {
+  const pct = Math.min(100, ((sent || 0) / (max || 1)) * 100);
+  const nearCap = pct >= 90;
+  return (
+    <div className={className}>
+      <div className={`flex items-baseline gap-2 mb-1 ${showLabel ? 'justify-between' : ''}`}>
+        {showLabel && (
+          <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Today</span>
+        )}
+        <span className="text-xs tabular-nums text-gray-800">
+          <span className="font-semibold">{sent || 0}</span>
+          <span className="text-gray-400"> / {max || 0}</span>
+        </span>
+      </div>
+      <div className={`h-1.5 rounded-full bg-gray-100 overflow-hidden ${wide ? 'w-full' : 'w-full max-w-[7.5rem]'}`}>
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${nearCap ? 'bg-amber-500' : 'bg-teal-500'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function formatJitterMinutesLabel(seconds) {
   const s = clampJitterSeconds(seconds ?? 0);
   if (s <= 0) return null;
@@ -750,6 +840,8 @@ export default function Inboxes() {
 
   // ---- Detail panel state ----
   const [selectedInbox, setSelectedInbox] = useState(null);
+  const [inboxQuery, setInboxQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // all | active | paused | issues
 
   // ---- Token expiry visual indicator (from system health data) ----
   const { rawData } = useSystemHealth();
@@ -763,6 +855,33 @@ export default function Inboxes() {
     }
     return ids;
   }, [rawData]);
+
+  const inboxSummary = useMemo(() => {
+    let active = 0;
+    let paused = 0;
+    let issues = 0;
+    for (const inbox of inboxes) {
+      const expired = expiredInboxIds.has(inbox.id);
+      if (expired || inbox.health === 'failing') issues += 1;
+      else if (inbox.paused) paused += 1;
+      else active += 1;
+    }
+    return { total: inboxes.length, active, paused, issues };
+  }, [inboxes, expiredInboxIds]);
+
+  const filteredInboxes = useMemo(() => {
+    const q = inboxQuery.trim().toLowerCase();
+    return inboxes.filter((inbox) => {
+      const expired = expiredInboxIds.has(inbox.id);
+      const status = inboxStatusInfo(inbox, expired).key;
+      if (statusFilter === 'active' && status !== 'active') return false;
+      if (statusFilter === 'paused' && status !== 'paused') return false;
+      if (statusFilter === 'issues' && status !== 'failing' && status !== 'expired' && status !== 'unknown') return false;
+      if (!q) return true;
+      const hay = `${inbox.email || ''} ${inbox.display_name || ''} ${inbox.provider || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [inboxes, inboxQuery, statusFilter, expiredInboxIds]);
 
   // Auto-open inbox detail panel when ?inbox=<id> is in the URL
   const autoOpenHandledRef = useRef(false);
@@ -1552,98 +1671,221 @@ export default function Inboxes() {
     }
   };
 
+  const openAddInbox = () => {
+    setForm(initialForm);
+    setSmtpForm(initialSmtpForm);
+    setAddTrackingMode('app');
+    setMessage(null);
+    setAddSmtpDiagnose(null);
+    setAddSmtpSendTestMsg(null);
+    setAddSmtpSendTestTo('');
+    setAddSmtpShowSendTest(false);
+    setShowAdd(true);
+  };
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-8">
-      {/* header with add button */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Inboxes</h1>
-        <Button variant="default" onClick={() => { setForm(initialForm); setSmtpForm(initialSmtpForm); setAddTrackingMode('app'); setMessage(null); setAddSmtpDiagnose(null); setAddSmtpSendTestMsg(null); setAddSmtpSendTestTo(''); setAddSmtpShowSendTest(false); setShowAdd(true); }}>
-          Add Inbox
+    <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-gray-50/80 to-white">
+      <div className="px-6 py-6 sm:px-8 max-w-[1400px] mx-auto space-y-5">
+      {/* Page header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Inboxes</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Sending accounts, daily capacity, and deliverability health.
+          </p>
+        </div>
+        <Button variant="default" onClick={openAddInbox} className="shrink-0 self-start sm:self-auto">
+          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add inbox
         </Button>
       </div>
 
       {inboxes.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white/70 px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100">
+            <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <p className="text-gray-500 text-sm">No inboxes yet. Click <span className="font-medium text-gray-700">Add Inbox</span> to get started.</p>
+          <h2 className="text-base font-semibold text-gray-900">Connect your first inbox</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
+            Link Gmail, Outlook, or any SMTP mailbox to start sending. Warm-up and daily limits keep deliverability healthy.
+          </p>
+          <Button variant="default" className="mt-6" onClick={openAddInbox}>
+            Add inbox
+          </Button>
         </div>
       )}
+
       {inboxes.length > 0 && (
-        <div className="flex gap-5 items-start" style={{ alignItems: 'flex-start' }}>
-          {/* ── Inbox card list ── */}
-          <div className="flex-1 min-w-0 space-y-2">
-            {inboxes.map(inbox => {
-              const isSelected = selectedInbox?.id === inbox.id;
-              const sentToday = inbox.sent_today || 0;
-              const maxToday = inbox.effective_max_per_day || inbox.max_emails_per_day;
-              const warmupActive = inbox.ramp_up_enabled && inbox.effective_max_per_day < inbox.max_emails_per_day;
-              const avatarLetter = (inbox.email || inbox.display_name || 'I')[0].toUpperCase();
-              return (
-                <button
-                  key={inbox.id}
-                  onClick={() => { if (isSelected) { tryCloseSidebar(); } else { setSelectedInbox(inbox); } }}
-                  className={`w-full text-left rounded-xl border px-5 py-4 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                    isSelected
-                      ? 'border-blue-400 bg-blue-50 shadow-sm'
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    {/* Left: avatar + email */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                        {avatarLetter}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 text-sm leading-tight truncate">
-                          {inbox.email || '(Connected account)'}
-                        </p>
-                        {inbox.display_name && (
-                          <p className="text-xs text-gray-500 leading-tight mt-0.5 truncate">{inbox.display_name}</p>
-                        )}
-                      </div>
-                    </div>
-                    {/* Right: badges + sent count */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {warmupActive && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                          Stage {inbox.effective_max_per_day}/{inbox.max_emails_per_day}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-500">
-                        <span className="font-semibold text-gray-800">{sentToday}</span>
-                        <span className="text-gray-400"> / {maxToday} sent</span>
-                      </span>
-                      {inbox.paused
-                        ? <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Paused</span>
-                        : inbox.health === 'failing'
-                          ? <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium" title={inbox.last_send_error || ''}>Failing</span>
-                          : inbox.provider === 'smtp' && inbox.health === 'unknown'
-                            ? <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">Unknown</span>
-                            : <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active</span>
-                      }
-                      {expiredInboxIds.has(inbox.id) && (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
-                          Token Expired
-                        </span>
-                      )}
-                      <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isSelected ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+        <>
+          {/* Summary strip */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Total', value: inboxSummary.total, hint: 'Connected' },
+              { label: 'Active', value: inboxSummary.active, hint: 'Ready to send' },
+              { label: 'Paused', value: inboxSummary.paused, hint: 'Temporarily stopped' },
+              { label: 'Needs attention', value: inboxSummary.issues, hint: 'Failing or expired' },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-gray-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              >
+                <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{stat.label}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{stat.value}</p>
+                <p className="mt-0.5 text-xs text-gray-400">{stat.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-5 items-start">
+          {/* ── Inbox list ── */}
+          <div className="flex-1 min-w-0">
+            <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
+              <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={inboxQuery}
+                    onChange={(e) => setInboxQuery(e.target.value)}
+                    placeholder="Search by email, name, or provider…"
+                    className="w-full rounded-lg border-gray-200 bg-gray-50/80 pl-9 pr-3 py-2 text-sm placeholder:text-gray-400 focus:bg-white"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter inboxes">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'active', label: 'Active' },
+                    { id: 'paused', label: 'Paused' },
+                    { id: 'issues', label: 'Issues' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={statusFilter === tab.id}
+                      onClick={() => setStatusFilter(tab.id)}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                        statusFilter === tab.id
+                          ? 'bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200'
+                          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                {/* Reset global table border/zebra styles from index.css for this list */}
+                <table className="w-full border-collapse text-left [&_th]:border-0 [&_td]:border-0 [&_tr:nth-child(even)]:bg-transparent">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                      <th className="px-4 py-2.5 font-medium bg-transparent">Inbox</th>
+                      <th className="px-3 py-2.5 font-medium bg-transparent w-[7.5rem]">Provider</th>
+                      <th className="px-3 py-2.5 font-medium bg-transparent w-[8.5rem]">Today</th>
+                      <th className="px-3 py-2.5 font-medium bg-transparent w-[7.5rem]" title="Recipient bounce rate over the last 14 days">Health</th>
+                      <th className="px-3 py-2.5 font-medium bg-transparent w-[7.5rem]">Status</th>
+                      <th className="px-3 py-2.5 font-medium bg-transparent w-8" aria-hidden />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInboxes.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                          No inboxes match your search or filter.
+                        </td>
+                      </tr>
+                    )}
+                    {filteredInboxes.map((inbox) => {
+                      const isSelected = selectedInbox?.id === inbox.id;
+                      const sentToday = inbox.sent_today || 0;
+                      const maxToday = inbox.effective_max_per_day || inbox.max_emails_per_day;
+                      const warmupActive = inbox.ramp_up_enabled && inbox.effective_max_per_day < inbox.max_emails_per_day;
+                      const expired = expiredInboxIds.has(inbox.id);
+                      const status = inboxStatusInfo(inbox, expired);
+                      const prov = providerMeta(inbox.provider);
+                      const health = healthTone(inbox.bounce_rate_14d, inbox.sender_bounce_rate_14d);
+                      const bouncePct = Number(inbox.bounce_rate_14d || 0);
+                      const avatarLetter = (inbox.email || inbox.display_name || 'I')[0].toUpperCase();
+                      return (
+                        <tr
+                          key={inbox.id}
+                          tabIndex={0}
+                          role="button"
+                          aria-selected={isSelected}
+                          onClick={() => { if (isSelected) { tryCloseSidebar(); } else { setSelectedInbox(inbox); } }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              if (isSelected) tryCloseSidebar();
+                              else setSelectedInbox(inbox);
+                            }
+                          }}
+                          className={`cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors duration-150 ${
+                            isSelected ? 'bg-teal-50/70' : 'bg-white hover:bg-gray-50/80'
+                          }`}
+                        >
+                          <td className="px-4 py-3.5 align-middle">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-9 h-9 rounded-full ${prov.avatar} flex items-center justify-center text-white text-sm font-semibold shrink-0 shadow-sm`}>
+                                {avatarLetter}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 text-sm leading-tight truncate max-w-[16rem] lg:max-w-[22rem]">
+                                  {inbox.email || '(Connected account)'}
+                                </p>
+                                <p className="text-xs text-gray-500 leading-tight mt-0.5 truncate max-w-[16rem] lg:max-w-[22rem]">
+                                  {inbox.display_name || prov.label}
+                                  {warmupActive ? ` · Warm-up ${inbox.effective_max_per_day}/${inbox.max_emails_per_day}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3.5 align-middle">
+                            <span className={`inline-flex text-[11px] font-medium px-2 py-0.5 rounded-md ${prov.chip}`}>
+                              {prov.label}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 align-middle">
+                            <QuotaBar sent={sentToday} max={maxToday} />
+                          </td>
+                          <td
+                            className="px-3 py-3.5 align-middle"
+                            title={`Last ${inbox.health_window_days || 14} days: recipient ${bouncePct}% · sender ${inbox.sender_bounce_rate_14d || 0}% · ${inbox.sent_14d || 0} sent`}
+                          >
+                            <div className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${health.bg} ${health.text} ring-1 ring-inset ${health.ring}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${health.bar}`} aria-hidden />
+                              {bouncePct.toFixed(1)}%
+                            </div>
+                            <p className="mt-0.5 text-[10px] text-gray-400">14-day bounce</p>
+                          </td>
+                          <td className="px-3 py-3.5 align-middle">
+                            <StatusPill status={status} />
+                          </td>
+                          <td className="px-3 py-3.5 align-middle text-gray-300">
+                            <svg className={`w-4 h-4 transition-transform duration-200 ${isSelected ? 'rotate-90 text-teal-600' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           {/* ── Detail panel ── */}
           {selectedInbox && (
-            <div className="w-[min(28rem,calc(100vw-2.5rem))] shrink-0 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden sticky top-4" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
+            <div className="w-[min(28rem,calc(100vw-2.5rem))] shrink-0 bg-white border border-gray-200/80 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.06)] flex flex-col overflow-hidden sticky top-4" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
               {editing && editing.id === selectedInbox.id ? (
                 <>
                   {/* Edit panel header */}
@@ -1924,9 +2166,9 @@ export default function Inboxes() {
               ) : (
                 <>
                   {/* Panel header */}
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/40">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                      <div className={`w-10 h-10 rounded-full ${providerMeta(selectedInbox.provider).avatar} flex items-center justify-center text-white text-sm font-semibold shrink-0 shadow-sm`}>
                         {(selectedInbox.email || selectedInbox.display_name || 'I')[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -1938,7 +2180,7 @@ export default function Inboxes() {
                     </div>
                     <button
                       onClick={() => setSelectedInbox(null)}
-                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white transition-colors"
                       aria-label="Close panel"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1951,7 +2193,7 @@ export default function Inboxes() {
                   <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
                     {/* Token expired banner */}
                     {expiredInboxIds.has(selectedInbox.id) && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
                         <svg className="w-4 h-4 text-red-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -1962,25 +2204,16 @@ export default function Inboxes() {
                       </div>
                     )}
                     {/* Status + Provider row */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        {selectedInbox.paused
-                          ? <span className="text-xs bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-medium">Paused</span>
-                          : selectedInbox.health === 'failing'
-                            ? <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-full font-medium">Failing</span>
-                            : selectedInbox.health === 'ok'
-                              ? <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-medium">Healthy</span>
-                              : selectedInbox.provider === 'smtp'
-                                ? <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">Unknown</span>
-                                : <span className="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-medium">Active</span>
-                        }
-                      </div>
-                      <span className="text-xs bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full font-medium capitalize">{selectedInbox.provider || 'gmail'}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <StatusPill status={inboxStatusInfo(selectedInbox, expiredInboxIds.has(selectedInbox.id))} />
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${providerMeta(selectedInbox.provider).chip}`}>
+                        {providerMeta(selectedInbox.provider).label}
+                      </span>
                     </div>
 
                     {/* SMTP send health — the reason behind the badge above */}
                     {selectedInbox.provider === 'smtp' && (selectedInbox.last_send_error || selectedInbox.health === 'failing' || selectedInbox.health === 'unknown') && (
-                      <div className={`p-3 rounded-lg border flex items-start gap-2 ${
+                      <div className={`p-3 rounded-xl border flex items-start gap-2 ${
                         selectedInbox.last_send_error
                           ? 'bg-red-50 border-red-200'
                           : 'bg-amber-50 border-amber-200'
@@ -2002,19 +2235,36 @@ export default function Inboxes() {
                     )}
 
                     {/* Sent today */}
-                    <div>
-                      <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Today</span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {selectedInbox.sent_today || 0}
-                          <span className="text-gray-400 font-normal"> / {selectedInbox.effective_max_per_day || selectedInbox.max_emails_per_day}</span>
-                        </span>
+                    <QuotaBar
+                      sent={selectedInbox.sent_today || 0}
+                      max={selectedInbox.effective_max_per_day || selectedInbox.max_emails_per_day}
+                      showLabel
+                      wide
+                    />
+
+                    {/* Sending health (14d) */}
+                    <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Sending health</p>
+                        <span className="text-[10px] text-gray-400">Last {selectedInbox.health_window_days || 14} days</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className="bg-blue-500 h-1.5 rounded-full transition-all"
-                          style={{ width: `${Math.min(100, ((selectedInbox.sent_today || 0) / (selectedInbox.effective_max_per_day || selectedInbox.max_emails_per_day || 1)) * 100)}%` }}
-                        />
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="text-[10px] text-gray-400">Sent</p>
+                          <p className="text-sm font-semibold tabular-nums text-gray-900">{selectedInbox.sent_14d || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400">Bounce</p>
+                          <p className={`text-sm font-semibold tabular-nums ${healthTone(selectedInbox.bounce_rate_14d, selectedInbox.sender_bounce_rate_14d).text}`}>
+                            {(selectedInbox.bounce_rate_14d || 0).toFixed(1)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400">Sender</p>
+                          <p className="text-sm font-semibold tabular-nums text-gray-900">
+                            {(selectedInbox.sender_bounce_rate_14d || 0).toFixed(1)}%
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -2131,8 +2381,10 @@ export default function Inboxes() {
               )}
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
+      </div>
 
       {/* add modal */}
       {showAdd && (

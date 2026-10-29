@@ -18,7 +18,7 @@ function parseDetailMessage(text) {
 }
 
 export default function Login() {
-  const { setupComplete } = useAuth();
+  const { setupComplete, applySession } = useAuth();
   const [restoreExpanded, setRestoreExpanded] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
   const [restoreFileKey, setRestoreFileKey] = useState(0);
@@ -29,6 +29,13 @@ export default function Login() {
   const [restorePreviewBusy, setRestorePreviewBusy] = useState(false);
   const [restoreExecuteBusy, setRestoreExecuteBusy] = useState(false);
   const [restoreMsg, setRestoreMsg] = useState(null);
+
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
   const isFirstUser = setupComplete === false;
 
@@ -83,6 +90,72 @@ export default function Login() {
     setRestoreMsg(null);
   };
 
+  const handlePasswordAuth = async (e) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || !password) {
+      setAuthError('Username and password are required');
+      return;
+    }
+
+    if (isFirstUser) {
+      if (!email.trim()) {
+        setAuthError('Email is required');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setAuthError('Passwords do not match');
+        return;
+      }
+    }
+
+    setAuthBusy(true);
+    try {
+      if (isFirstUser) {
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: trimmedUsername,
+            email: email.trim(),
+            password,
+          }),
+        });
+        const regText = await regRes.text();
+        if (!regRes.ok) {
+          throw new Error(parseDetailMessage(regText) || regRes.statusText);
+        }
+      }
+
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          username: trimmedUsername,
+          password,
+        }),
+      });
+      const loginText = await loginRes.text();
+      let loginData;
+      try {
+        loginData = JSON.parse(loginText);
+      } catch {
+        loginData = { detail: loginText || loginRes.statusText };
+      }
+      if (!loginRes.ok) {
+        throw new Error(parseDetailMessage(loginText) || loginRes.statusText);
+      }
+      await applySession(loginData.access_token);
+    } catch (err) {
+      setAuthError(err.message || 'Authentication failed');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   const heading = isFirstUser
     ? 'Create your admin account'
     : 'Sign in to your account';
@@ -94,6 +167,10 @@ export default function Login() {
   const microsoftLabel = isFirstUser
     ? 'Create admin account with Microsoft'
     : 'Sign in with Microsoft';
+
+  const submitLabel = isFirstUser
+    ? (authBusy ? 'Creating account…' : 'Create admin account')
+    : (authBusy ? 'Signing in…' : 'Sign in');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -134,6 +211,108 @@ export default function Login() {
             {microsoftLabel}
           </a>
         </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-gray-50 px-3 text-gray-500">or</span>
+          </div>
+        </div>
+
+        <form onSubmit={handlePasswordAuth} className="space-y-4">
+          <div>
+            <label htmlFor="auth-username" className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <input
+              id="auth-username"
+              type="text"
+              autoComplete="username"
+              required
+              minLength={3}
+              maxLength={150}
+              disabled={authBusy}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+            />
+          </div>
+
+          {isFirstUser && (
+            <div>
+              <label htmlFor="auth-email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                id="auth-email"
+                type="email"
+                autoComplete="email"
+                required
+                disabled={authBusy}
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+              />
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="auth-password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="auth-password"
+              type="password"
+              autoComplete={isFirstUser ? 'new-password' : 'current-password'}
+              required
+              minLength={8}
+              maxLength={128}
+              disabled={authBusy}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+            />
+            {isFirstUser && (
+              <p className="mt-1 text-xs text-gray-500">
+                At least 8 characters, with uppercase, lowercase, and a digit.
+              </p>
+            )}
+          </div>
+
+          {isFirstUser && (
+            <div>
+              <label htmlFor="auth-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm password
+              </label>
+              <input
+                id="auth-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={128}
+                disabled={authBusy}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+              />
+            </div>
+          )}
+
+          {authError && (
+            <p className="text-center text-sm text-red-600">{authError}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={authBusy}
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            {submitLabel}
+          </button>
+        </form>
 
         {isFirstUser && (
           <>

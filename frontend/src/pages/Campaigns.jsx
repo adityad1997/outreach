@@ -228,7 +228,9 @@ export default function Campaigns() {
                     <td className="py-2">
                       {isPaused ? (
                         <span className="text-gray-500">
-                          {c.name}{' '}
+                          <Link to={`/campaigns/${c.id}`} className="text-gray-500 hover:text-teal-500">
+                            {c.name}
+                          </Link>{' '}
                           <span className="inline-block text-amber-700 bg-amber-100 px-1 py-0.5 text-xs font-bold rounded">PAUSED</span>
                         </span>
                       ) : isCompleted ? (

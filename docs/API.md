@@ -768,6 +768,8 @@ Export the campaign's leads as a CSV file.
 
 Import leads from a CSV file. Expects an `email` column; `name` and any extra columns become `custom_data`. Reserved columns (not merged into `custom_data`): **`status`**, **`interest`**, **`email_verification_status`** (same semantics as bulk add).
 
+The campaign UI maps CSV/paste columns client-side (Email, First Name → `first_name`, Last Name → `last_name`, Name, Custom, Skip) and then calls the JSON bulk add endpoint below with the mapped payload. This multipart route remains available for scripts and API clients.
+
 **Query params:** `skip_duplicates` (default `true`), `verify_emails` (default `false`)
 
 **Form data:** `file` (multipart CSV upload)

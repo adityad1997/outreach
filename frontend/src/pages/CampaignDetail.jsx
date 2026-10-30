@@ -28,6 +28,10 @@ import {
   Legend,
   CartesianGrid,
 } from 'recharts';
+import FieldMappingModal from '../components/FieldMappingModal';
+import VariableTextInput from '../components/VariableTextInput';
+import { useQuillVariableAutocomplete } from '../components/VariableAutocomplete';
+import { parseDelimitedText, parsePasteOrCsv } from '../utils/leadImportMapping';
 
 // ─── tabs ─────────────────────────────────────────────────────────────────────
 const TABS = ['analytics', 'sequences', 'leads', 'queue', 'settings'];
@@ -485,7 +489,8 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
   const [confirmPayload, setConfirmPayload] = useState(null);
   const [confirmPreview, setConfirmPreview] = useState(null);
   const [confirmAddLoading, setConfirmAddLoading] = useState(false);
-  const [importFile, setImportFile] = useState(null);
+  const [mappingSession, setMappingSession] = useState(null); // { headers, rows, samples }
+  const [previewProgress, setPreviewProgress] = useState(null); // { done, total } while confirm_only runs
   const [searchInput, setSearchInput] = useState(leadsSearch);
 
   useEffect(() => {
@@ -755,105 +760,143 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
     }
   };
 
-  /* Enhanced bulk parser – supports:
-     1. email-per-line  (john@a.com)
-     2. comma-separated (john@a.com, jane@b.com)
-     3. tab-separated rows from Excel / Sheets copy-paste (email \t name \t company ...)
-     4. CSV-style rows with headers (email,name,company\njohn@a.com,John,Acme)
-  */
-  const addBulk = async e => {
-    e.preventDefault();
-    const lines = bulk.split('\n').map(s => s.trim()).filter(Boolean);
-    if (!lines.length) { setMsg({ type: 'error', text: 'No data entered' }); return; }
+  const CONFIRM_ONLY_CHUNK = 15;
+  const INVALID_FORMAT_CAP = 50;
 
-    // Detect if first line could be a header
-    const firstLine = lines[0];
-    const hasTabs = firstLine.includes('\t');
-    const sep = hasTabs ? '\t' : ',';
-    const cells = firstLine.split(sep).map(s => s.trim().toLowerCase());
-    const looksLikeHeader = cells.includes('email');
+  const openConfirmWithPayload = async (payload) => {
+    const total = payload.length;
+    if (!total) throw new Error('No leads to preview');
 
-    let payload;
-    if (looksLikeHeader) {
-      // Parse as tabular data with headers
-      const headers = cells;
-      const emailIdx = headers.indexOf('email');
-      const nameIdx = headers.indexOf('name');
-      payload = lines.slice(1).map(line => {
-        const parts = line.split(sep).map(s => s.trim());
-        const email = parts[emailIdx] || '';
-        const name = nameIdx >= 0 ? (parts[nameIdx] || '') : '';
-        const custom_data = {};
-        headers.forEach((h, i) => {
-          if (i !== emailIdx && i !== nameIdx && parts[i]) {
-            custom_data[h] = parts[i];
-          }
-        });
-        return { email, name: name || undefined, custom_data: Object.keys(custom_data).length ? custom_data : undefined };
-      }).filter(r => r.email);
-    } else {
-      // Simple mode – emails only (comma or newline separated)
-      const all = bulk.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
-      payload = all.map(em => ({ email: em }));
-    }
-
-    if (!payload.length) { setMsg({ type: 'error', text: 'No valid emails found' }); return; }
-
+    setPreviewProgress({ done: 0, total });
     try {
-      const preview = await api.post(`/campaigns/${campaignId}/leads?confirm_only=true&skip_duplicates=${skipDuplicates}`, payload);
+      const aggregated = {
+        preview: true,
+        total_valid: 0,
+        providers: {},
+        total_flagged: 0,
+        flagged: {
+          invalid_format: [],
+          duplicates_in_batch: 0,
+        },
+      };
+
+      for (let i = 0; i < total; i += CONFIRM_ONLY_CHUNK) {
+        const chunk = payload.slice(i, i + CONFIRM_ONLY_CHUNK);
+        const preview = await api.post(
+          `/campaigns/${campaignId}/leads?confirm_only=true&skip_duplicates=${skipDuplicates}`,
+          chunk,
+        );
+        aggregated.total_valid += preview.total_valid || 0;
+        aggregated.total_flagged += preview.total_flagged || 0;
+        aggregated.flagged.duplicates_in_batch += preview.flagged?.duplicates_in_batch || 0;
+        const invalids = preview.flagged?.invalid_format || [];
+        for (const em of invalids) {
+          if (aggregated.flagged.invalid_format.length >= INVALID_FORMAT_CAP) break;
+          aggregated.flagged.invalid_format.push(em);
+        }
+        for (const [provider, count] of Object.entries(preview.providers || {})) {
+          aggregated.providers[provider] = (aggregated.providers[provider] || 0) + count;
+        }
+        setPreviewProgress({ done: Math.min(i + chunk.length, total), total });
+      }
+
       setConfirmPayload(payload);
-      setConfirmPreview(preview);
-      setImportFile(null);
+      setConfirmPreview(aggregated);
       setShowLeadsConfirm(true);
-    } catch (e) {
-      setMsg({ type: 'error', text: e.message });
+    } finally {
+      setPreviewProgress(null);
     }
   };
 
-  // ---- File import ----
+  /* Bulk paste: emails-only → confirm; tabular → field mapping modal */
+  const addBulk = async e => {
+    e.preventDefault();
+    setMsg(null);
+    const parsed = parsePasteOrCsv(bulk);
+    if (parsed.mode === 'empty') {
+      setMsg({ type: 'error', text: parsed.error || 'No data entered' });
+      return;
+    }
+    if (parsed.mode === 'emails') {
+      const payload = parsed.emails.map(em => ({ email: em }));
+      if (!payload.length) {
+        setMsg({ type: 'error', text: 'No valid emails found' });
+        return;
+      }
+      try {
+        await openConfirmWithPayload(payload);
+      } catch (err) {
+        setMsg({ type: 'error', text: err.message });
+      }
+      return;
+    }
+    // Table with headers → mapping UI
+    if (!parsed.headers.length) {
+      setMsg({ type: 'error', text: 'No mappable columns found' });
+      return;
+    }
+    setMappingSession({
+      headers: parsed.headers,
+      rows: parsed.rows,
+      samples: parsed.samples,
+    });
+  };
+
+  // ---- File import → parse locally → mapping modal ----
   const handleFileImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
     setLastDuplicates([]);
+    setMsg(null);
     try {
-      const preview = await api.upload(`/campaigns/${campaignId}/leads/import?confirm_only=true&skip_duplicates=${skipDuplicates}`, file);
-      setImportFile(file);
-      setConfirmPayload(null);
-      setConfirmPreview(preview);
-      setShowLeadsConfirm(true);
+      const text = await file.text();
+      const parsed = parseDelimitedText(text);
+      if (parsed.error) throw new Error(parsed.error);
+      if (!parsed.headers.length) throw new Error('No mappable columns found in file');
+      if (!parsed.rows.length) throw new Error('File has headers but no data rows');
+      setMappingSession({
+        headers: parsed.headers,
+        rows: parsed.rows,
+        samples: parsed.samples,
+      });
     } catch (err) {
       notify({ type: 'error', message: err.message });
     } finally {
       setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleMappingContinue = async (payload) => {
+    setMappingSession(null);
+    try {
+      await openConfirmWithPayload(payload);
+    } catch (err) {
+      notify({ type: 'error', message: err.message });
     }
   };
 
   const handleConfirmAdd = async () => {
+    if (!confirmPayload) return;
     setConfirmAddLoading(true);
     try {
-      let res;
-      if (confirmPayload) {
-        res = await api.post(`/campaigns/${campaignId}/leads?skip_duplicates=${skipDuplicates}&verify_emails=${verifyEmails}`, confirmPayload);
-        setBulk('');
-        const dupMsg = res.duplicate_leads?.length ? ` (${res.duplicate_leads.length} duplicate(s) skipped)` : '';
-        notify({ type: 'success', message: `${res.added || confirmPayload.length} lead(s) added${dupMsg}` });
-      } else if (importFile) {
-        res = await api.upload(`/campaigns/${campaignId}/leads/import?skip_duplicates=${skipDuplicates}&verify_emails=${verifyEmails}`, importFile);
-        const dupMsg = res.duplicate_leads?.length ? `, ${res.duplicate_leads.length} duplicate(s) skipped` : '';
-        notify({ type: 'success', message: `Imported: ${res.added} added, ${res.already_enrolled} already enrolled, ${res.errors} errors${dupMsg}` });
-      }
+      const res = await api.post(
+        `/campaigns/${campaignId}/leads?skip_duplicates=${skipDuplicates}&verify_emails=${verifyEmails}`,
+        confirmPayload,
+      );
+      setBulk('');
+      const dupMsg = res.duplicate_leads?.length ? ` (${res.duplicate_leads.length} duplicate(s) skipped)` : '';
+      notify({ type: 'success', message: `${res.added || confirmPayload.length} lead(s) added${dupMsg}` });
       setShowLeadsConfirm(false);
       setConfirmPreview(null);
       setConfirmPayload(null);
-      setImportFile(null);
       setLastDuplicates(res?.duplicate_leads || []);
       refresh();
     } catch (err) {
       notify({ type: 'error', message: err.message });
     } finally {
       setConfirmAddLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -972,9 +1015,9 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
               <li><strong>Tab-separated (Excel / Sheets copy-paste)</strong> — first row = headers<br/><code className="bg-teal-100 px-1 rounded">email&nbsp;&nbsp;&nbsp;name&nbsp;&nbsp;&nbsp;company</code><br/><code className="bg-teal-100 px-1 rounded">john@a.com&nbsp;&nbsp;&nbsp;John&nbsp;&nbsp;&nbsp;Acme</code></li>
               <li><strong>Comma-separated with headers</strong><br/><code className="bg-teal-100 px-1 rounded">email,name,company</code><br/><code className="bg-teal-100 px-1 rounded">john@a.com,John,Acme</code></li>
             </ul>
-            <p className="text-xs text-teal-600 mt-1">Columns beyond <em>email</em> and <em>name</em> are saved as custom fields.</p>
+            <p className="text-xs text-teal-600 mt-1">After paste/upload you map columns (Email, First Name, Last Name, Name, Company, Website, LinkedIn, City, Custom, or Skip). Unmapped columns are skipped. Mapped fields become template variables like <code className="bg-teal-100 px-1 rounded">{'{{first_name}}'}</code> or <code className="bg-teal-100 px-1 rounded">{'{{company}}'}</code>.</p>
             <p className="font-semibold mt-2">CSV file import:</p>
-            <p className="text-xs">Upload a <code className="bg-teal-100 px-1 rounded">.csv</code> or <code className="bg-teal-100 px-1 rounded">.tsv</code> file with an <em>email</em> header column. Extra columns become custom fields.</p>
+            <p className="text-xs">Upload a <code className="bg-teal-100 px-1 rounded">.csv</code> or <code className="bg-teal-100 px-1 rounded">.tsv</code> file, then map columns on the next screen. One column must map to Email.</p>
           </div>
         )}
 
@@ -1402,6 +1445,41 @@ function LeadsTab({ leads, leadsPage = 1, leadsTotal = 0, leadsHasMore = false, 
           <Button size="sm" variant="outline" disabled={!leadsHasMore} onClick={() => onLeadsPageChange?.(leadsPage + 1)}>Next</Button>
         </div>
       )}
+      {mappingSession && (
+        <FieldMappingModal
+          headers={mappingSession.headers}
+          rows={mappingSession.rows}
+          samples={mappingSession.samples}
+          onBack={() => setMappingSession(null)}
+          onContinue={handleMappingContinue}
+        />
+      )}
+
+      {previewProgress && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            data-darkreader-ignore
+            className="rounded-xl shadow-lg p-6 w-full max-w-sm mx-auto"
+            style={{ backgroundColor: 'white' }}
+          >
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">Analyzing email providers…</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Progress: {previewProgress.done} of {previewProgress.total} leads
+            </p>
+            <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full bg-teal-600 transition-all duration-300 ease-out"
+                style={{
+                  width: `${previewProgress.total
+                    ? Math.round((previewProgress.done / previewProgress.total) * 100)
+                    : 0}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirm leads modal */}
       {showLeadsConfirm && confirmPreview && (
         <div
@@ -2334,7 +2412,7 @@ const QUILL_FORMATS = [
   'list','bullet','link','blockquote','code-block',
 ];
 
-function VariablesGuide() {
+function VariablesGuide({ customKeys = [] }) {
   const [copiedVar, setCopiedVar] = useState(null);
   const notify = useNotify();
 
@@ -2345,19 +2423,26 @@ function VariablesGuide() {
     setTimeout(() => setCopiedVar(null), 1500);
   };
 
-  const VARIABLES = [
-    { v: '{{name}}', hint: 'Lead name' },
-    { v: '{{email}}', hint: 'Lead email' },
-    { v: '{{unsubscribe_link}}', hint: 'One-click unsubscribe URL' },
-    {
-      v: '{{random: a | b}}',
-      hint: 'One option is picked at random per email. Options can include variables, e.g. {{random: Hi {{name}} | Hey there}}',
-    },
-  ];
+  const VARIABLES = useMemo(() => {
+    const base = [
+      { v: '{{email}}', hint: 'Lead email' },
+      { v: '{{unsubscribe_link}}', hint: 'One-click unsubscribe URL' },
+      {
+        v: '{{random: a | b}}',
+        hint: 'One option is picked at random per email. Options can include variables, e.g. {{random: Hi {{first_name}} | Hey there}}',
+      },
+    ];
+    const extras = [...customKeys]
+      .filter(Boolean)
+      .sort()
+      .filter(k => !['name', 'email', 'unsubscribe_link'].includes(k))
+      .map(k => ({ v: `{{${k}}}`, hint: `Custom field: ${k}` }));
+    return [...base, ...extras];
+  }, [customKeys]);
 
   return (
     <p className="mt-1 text-xs text-gray-500 flex flex-wrap items-center gap-1">
-      <span>Variables:</span>
+      <span>Variables (type <code className="px-1 bg-gray-100 rounded">{'{{'}</code> to insert):</span>
       {VARIABLES.map(({ v, hint }) => (
         <span key={v} className="relative inline-flex items-center">
           <code
@@ -2374,14 +2459,14 @@ function VariablesGuide() {
           )}
         </span>
       ))}
-      <span className="text-gray-400">+ custom fields like <code className="px-1 bg-gray-100 rounded">{'{{company}}'}</code></span>
+      {customKeys.length === 0 && (
+        <span className="text-gray-400">Import leads with custom columns to see more fields here.</span>
+      )}
     </p>
   );
 }
 
-function SequenceBodyEditor({ value, onChange, isHtml, onIsHtmlChange, previewText, onPreviewTextChange, isFirstSequence, campaign, required }) {
-  const notify = useNotify();
-
+function SequenceBodyEditor({ value, onChange, isHtml, onIsHtmlChange, previewText, onPreviewTextChange, isFirstSequence, campaign, required, customKeys = [] }) {
   const forcePlainAll   = campaign?.send_all_as_text;
   const forcePlainFirst = campaign?.send_first_as_text && isFirstSequence;
   const isOverridden    = forcePlainAll || forcePlainFirst;
@@ -2389,6 +2474,14 @@ function SequenceBodyEditor({ value, onChange, isHtml, onIsHtmlChange, previewTe
   // Tracking needs HTML: if sequence is plain text but tracking is on, it will be upgraded
   const trackingUpgrade = !isHtml && trackingEnabled && !isOverridden;
   const effectiveHtml   = (isHtml || trackingUpgrade) && !isOverridden;
+
+  const quillRef = useRef(null);
+  const getQuill = useCallback(() => quillRef.current?.getEditor?.() ?? null, []);
+  const { menu: quillMenu, refresh: refreshQuillSuggest } = useQuillVariableAutocomplete({
+    getQuill,
+    customKeys,
+    enabled: effectiveHtml,
+  });
 
   const overrideMsg = forcePlainAll
     ? 'Campaign is set to send all emails as plain text — HTML will be ignored. Tracking will also be disabled for these emails.'
@@ -2417,21 +2510,33 @@ function SequenceBodyEditor({ value, onChange, isHtml, onIsHtmlChange, previewTe
         )}
       </div>
       {effectiveHtml ? (
-        <div className="border rounded overflow-hidden">
+        <div className="border rounded overflow-hidden relative">
           <ReactQuill
-            theme="snow" value={value} onChange={onChange}
-            modules={QUILL_MODULES} formats={QUILL_FORMATS}
+            ref={quillRef}
+            theme="snow"
+            value={value}
+            onChange={(html, _delta, _source, editor) => {
+              onChange(html);
+              // Defer so Quill selection is updated
+              requestAnimationFrame(() => refreshQuillSuggest());
+            }}
+            onChangeSelection={() => refreshQuillSuggest()}
+            modules={QUILL_MODULES}
+            formats={QUILL_FORMATS}
             style={{ minHeight: '160px' }}
           />
+          {quillMenu}
         </div>
       ) : (
-        <textarea
+        <VariableTextInput
+          multiline
           className="w-full border rounded-lg p-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
           required={required}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={onChange}
           rows={5}
-          placeholder="Email body…"
+          placeholder="Email body… (type {{ to insert variables)"
+          customKeys={customKeys}
         />
       )}
       {effectiveHtml && (
@@ -2440,17 +2545,17 @@ function SequenceBodyEditor({ value, onChange, isHtml, onIsHtmlChange, previewTe
             Preview text
             <span className="ml-1 font-normal text-gray-400">— shown as the inbox snippet and in push notifications</span>
           </label>
-          <input
-            type="text"
+          <VariableTextInput
             maxLength={150}
             value={previewText || ''}
-            onChange={e => onPreviewTextChange(e.target.value)}
+            onChange={onPreviewTextChange}
+            customKeys={customKeys}
             className="w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 placeholder-gray-400"
             placeholder="Optional — leave blank to use the email body text"
           />
         </div>
       )}
-      <VariablesGuide />
+      <VariablesGuide customKeys={customKeys} />
     </div>
   );
 }
@@ -2960,6 +3065,7 @@ function CustomEmailEditorModal({ target, campaignId, onClose, onSaved }) {
   if (!target) return null;
 
   const hasFallback = sequence?.fallback_subject || sequence?.fallback_body;
+  const leadCustomKeys = Object.keys(lead?.custom_data || {}).sort();
 
   return (
     <div
@@ -2999,10 +3105,11 @@ function CustomEmailEditorModal({ target, campaignId, onClose, onSaved }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-            <input
+            <VariableTextInput
               className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${subjectError ? 'border-red-400 focus:ring-red-300' : 'focus:ring-teal-300'}`}
               value={subject}
-              onChange={e => { setSubject(e.target.value); setSubjectError(''); }}
+              onChange={val => { setSubject(val); setSubjectError(''); }}
+              customKeys={leadCustomKeys}
               placeholder={
                 sequence?.fallback_subject
                   ? sequence.fallback_subject
@@ -3028,18 +3135,20 @@ function CustomEmailEditorModal({ target, campaignId, onClose, onSaved }) {
                 />
               </div>
             ) : (
-              <textarea
+              <VariableTextInput
+                multiline
                 className={`w-full border rounded-lg p-3 font-mono text-sm focus:outline-none focus:ring-2 ${bodyError ? 'border-red-400 focus:ring-red-300' : 'focus:ring-teal-300'}`}
                 value={body}
-                onChange={e => { setBody(e.target.value); setBodyError(''); }}
+                onChange={val => { setBody(val); setBodyError(''); }}
+                customKeys={leadCustomKeys}
                 rows={8}
-                placeholder={sequence?.fallback_body ? sequence.fallback_body : "Write your custom email body"}
+                placeholder={sequence?.fallback_body ? sequence.fallback_body : "Write your custom email body (type {{ to insert variables)"}
               />
             )}
             {bodyError && <p className="text-xs text-red-500 mt-1">{bodyError}</p>}
           </div>
 
-          <VariablesGuide />
+          <VariablesGuide customKeys={leadCustomKeys} />
         </div>
 
         <div className="px-6 py-3 border-t flex justify-end gap-2">
@@ -3073,6 +3182,12 @@ function SequencesTab({ sequences, campaignId, campaign, leads, refresh }) {
   const [editingVariant, setEditingVariant] = useState(null);
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [variantForm, setVariantForm] = useState({ label: '', subject: '', body: '', is_html: false, preview_text: '' });
+
+  const customKeys = useMemo(() => {
+    const keys = new Set();
+    (leads || []).forEach(l => Object.keys(l.custom_data || {}).forEach(k => keys.add(k)));
+    return [...keys].sort();
+  }, [leads]);
 
   useEffect(() => { setPos(sequences.length); }, [sequences]);
   useEffect(() => {
@@ -3305,23 +3420,23 @@ function SequencesTab({ sequences, campaignId, campaign, leads, refresh }) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fallback subject</label>
-                    <input className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" value={editing.fallback_subject || ''} onChange={e => updateEditing({ fallback_subject: e.target.value })} placeholder={(editing.position ?? 0) === 0 ? "Leave blank — first email requires a subject per lead" : "Leave blank — custom subject will reply in thread"} />
+                    <VariableTextInput className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" value={editing.fallback_subject || ''} onChange={val => updateEditing({ fallback_subject: val })} customKeys={customKeys} placeholder={(editing.position ?? 0) === 0 ? "Leave blank — first email requires a subject per lead" : "Leave blank — custom subject will reply in thread"} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fallback body</label>
-                    <textarea className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" value={editing.fallback_body || ''} onChange={e => updateEditing({ fallback_body: e.target.value })} placeholder="Write a fallback template to use when composing the custom email per lead" />
-                    <VariablesGuide />
+                    <VariableTextInput multiline className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" value={editing.fallback_body || ''} onChange={val => updateEditing({ fallback_body: val })} customKeys={customKeys} rows={5} placeholder="Write a fallback template to use when composing the custom email per lead" />
+                    <VariablesGuide customKeys={customKeys} />
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                    <input className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" value={editing.subject || ''} onChange={e => updateEditing({ subject: e.target.value })} placeholder="Leave blank to reply in same thread" />
+                    <VariableTextInput className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" value={editing.subject || ''} onChange={val => updateEditing({ subject: val })} customKeys={customKeys} placeholder="Leave blank to reply in same thread" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email Body *</label>
-                    <SequenceBodyEditor value={editing.body} onChange={val => updateEditing({ body: val })} isHtml={editing.is_html ?? false} onIsHtmlChange={v => updateEditing({ is_html: v })} previewText={editing.preview_text ?? ''} onPreviewTextChange={v => updateEditing({ preview_text: v })} isFirstSequence={editing.position === 0} campaign={campaign} required />
+                    <SequenceBodyEditor value={editing.body} onChange={val => updateEditing({ body: val })} isHtml={editing.is_html ?? false} onIsHtmlChange={v => updateEditing({ is_html: v })} previewText={editing.preview_text ?? ''} onPreviewTextChange={v => updateEditing({ preview_text: v })} isFirstSequence={editing.position === 0} campaign={campaign} required customKeys={customKeys} />
                   </div>
                 </>
               )}
@@ -3483,11 +3598,12 @@ function SequencesTab({ sequences, campaignId, campaign, leads, refresh }) {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Subject <span className="text-gray-400">(blank = use step's subject)</span></label>
-                      <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" placeholder="Leave blank to use step subject" value={variantForm.subject} onChange={e => setVariantForm(f => ({ ...f, subject: e.target.value }))} />
+                      <VariableTextInput className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" placeholder="Leave blank to use step subject" value={variantForm.subject} onChange={val => setVariantForm(f => ({ ...f, subject: val }))} customKeys={customKeys} />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Body *</label>
-                      <textarea className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" placeholder="Email body..." value={variantForm.body} onChange={e => setVariantForm(f => ({ ...f, body: e.target.value }))} />
+                      <VariableTextInput multiline className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" placeholder="Email body... (type {{ to insert variables)" value={variantForm.body} onChange={val => setVariantForm(f => ({ ...f, body: val }))} customKeys={customKeys} rows={5} />
+                      <VariablesGuide customKeys={customKeys} />
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="default" onClick={editingVariant ? saveVariant : createVariant} type="button">
@@ -3518,23 +3634,23 @@ function SequencesTab({ sequences, campaignId, campaign, leads, refresh }) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fallback subject</label>
-                    <input className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" value={form.fallback_subject} onChange={e => setForm(f => ({ ...f, fallback_subject: e.target.value }))} placeholder={pos === 0 ? "Leave blank — first email requires a subject per lead" : "Leave blank — custom subject will reply in thread"} />
+                    <VariableTextInput className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" value={form.fallback_subject} onChange={val => setForm(f => ({ ...f, fallback_subject: val }))} customKeys={customKeys} placeholder={pos === 0 ? "Leave blank — first email requires a subject per lead" : "Leave blank — custom subject will reply in thread"} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fallback body</label>
-                    <textarea className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" value={form.fallback_body} onChange={e => setForm(f => ({ ...f, fallback_body: e.target.value }))} placeholder="Write a fallback template to use when composing the custom email per lead" />
-                    <VariablesGuide />
+                    <VariableTextInput multiline className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 min-h-[120px] font-mono" value={form.fallback_body} onChange={val => setForm(f => ({ ...f, fallback_body: val }))} customKeys={customKeys} rows={5} placeholder="Write a fallback template to use when composing the custom email per lead" />
+                    <VariablesGuide customKeys={customKeys} />
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                    <input className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Leave blank to reply in same thread" />
+                    <VariableTextInput className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" value={form.subject} onChange={val => setForm(f => ({ ...f, subject: val }))} customKeys={customKeys} placeholder="Leave blank to reply in same thread" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email Body *</label>
-                    <SequenceBodyEditor value={form.body} onChange={val => setForm(f => ({ ...f, body: val }))} isHtml={form.is_html} onIsHtmlChange={v => setForm(f => ({ ...f, is_html: v }))} previewText={form.preview_text ?? ''} onPreviewTextChange={v => setForm(f => ({ ...f, preview_text: v }))} isFirstSequence={pos === 0} campaign={campaign} required />
+                    <SequenceBodyEditor value={form.body} onChange={val => setForm(f => ({ ...f, body: val }))} isHtml={form.is_html} onIsHtmlChange={v => setForm(f => ({ ...f, is_html: v }))} previewText={form.preview_text ?? ''} onPreviewTextChange={v => setForm(f => ({ ...f, preview_text: v }))} isFirstSequence={pos === 0} campaign={campaign} required customKeys={customKeys} />
                   </div>
                 </>
               )}

@@ -4,10 +4,10 @@
   <img src="https://img.shields.io/badge/Docker-One--Command_Deploy-2496ED?logo=docker&logoColor=white" alt="Docker One-Command Deploy" />
   <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg" alt="PRs Welcome" />
   <img src="https://img.shields.io/badge/AI_Reply_Classification-19_Providers-orange" alt="AI Reply Classification" />
-  <img src="https://analytics.shortformfunnels.com/t.gif?url=github.com/abdelftahzowail/Quickly&ref=readme" alt="" width="1" height="1" />
+  <img src="https://analytics.shortformfunnels.com/t.gif?url=github.com/abdelftahzowail/Outreach&ref=readme" alt="" width="1" height="1" />
 </p>
 
-<h1 align="center">Quickly — Open-Source Self-Hosted Cold Email Platform</h1>
+<h1 align="center">Outreach — Open-Source Self-Hosted Cold Email Platform</h1>
 
 <p align="center"><strong>A simple, focused cold email platform you host yourself. An open-source clone of Instantly — but free and fully under your control.</strong></p>
 
@@ -20,7 +20,7 @@
 </p>
 
 ---
-![Quickly product tour — sequences, inbox rotation, analytics, and more](static/output.gif)
+![Outreach product tour — sequences, inbox rotation, analytics, and more](static/output.gif)
 
 ---
 
@@ -34,12 +34,12 @@
 
 ---
 
-## What is Quickly?
-**Quickly is a free, open-source cold email platform designed to be extremely simple and purpose-built for cold outreach.** It gives sales teams, agencies, and indie hackers the same multi-inbox sequencing, AI reply classification, and campaign analytics you expect from Instantly — but self-hosted on your own infrastructure.
+## What is Outreach?
+**Outreach is a free, open-source cold email platform designed to be extremely simple and purpose-built for cold outreach.** It gives sales teams, agencies, and indie hackers the same multi-inbox sequencing, AI reply classification, and campaign analytics you expect from Instantly — but self-hosted on your own infrastructure.
 
 Emails are sent through **Google and Microsoft’s official APIs using OAuth 2.0**, meaning your campaigns use **Gmail and Microsoft 365's own sending infrastructure and IP reputation** rather than shared SMTP servers. The result is deliverability that matches — and often exceeds — traditional SaaS cold email tools.
 
-Quickly focuses on doing **cold email extremely well**, without unnecessary complexity. If you've used Instantly before, you'll feel immediately at home.
+Outreach focuses on doing **cold email extremely well**, without unnecessary complexity. If you've used Instantly before, you'll feel immediately at home.
 
 ```bash
 # Get up and running in under 5 minutes
@@ -50,9 +50,9 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 
 ---
 
-## Why Quickly? (vs. Instantly)
+## Why Outreach? (vs. Instantly)
 
-| What you're paying for today             | What Quickly gives you instead                         |
+| What you're paying for today             | What Outreach gives you instead                         |
 | ---------------------------------------- | ------------------------------------------------------ |
 | $97–$500/month in SaaS fees              | Deploy free on Railway or any Linux VPS                |
 | Per-seat pricing that scales against you | Unlimited team members, unlimited contacts             |
@@ -60,7 +60,7 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 | Vendor lock-in and feature gating        | MIT licensed, fully hackable, 90+ REST API endpoints   |
 | Complex multi-tool onboarding            | One `docker compose up` — live in under 5 minutes      |
 
-> **Quickly is an open-source clone of Instantly.** Looking for Instantly, Smartlead, or Lemlist alternatives for cold email? Quickly gives you the same multi-inbox sequencing, AI reply classification, and campaign analytics — self-hosted, no monthly fees, your data on your server.
+> **Outreach is an open-source clone of Instantly.** Looking for Instantly, Smartlead, or Lemlist alternatives for cold email? Outreach gives you the same multi-inbox sequencing, AI reply classification, and campaign analytics — self-hosted, no monthly fees, your data on your server.
 
 ---
 
@@ -77,7 +77,7 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 ### Personalization & Testing
 
 * **Template variables** — Use `{{name}}`, `{{company}}`, `{{title}}`, or any custom field from your CSV in subject lines and email bodies
-* **A/B testing** — Multiple subject/body variants per step; Quickly tracks open rates, click rates, and reply rates per variant and selects randomly at send time
+* **A/B testing** — Multiple subject/body variants per step; Outreach tracks open rates, click rates, and reply rates per variant and selects randomly at send time
 * **CSV import** — Any CSV column beyond `email` automatically becomes a template variable
 
 ### Inbox & Replies
@@ -88,7 +88,7 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 
 ### Tracking & Analytics
 
-* **Open & click tracking** — Pixel tracking and link wrapping; **Quickly Beacon** for custom tracking hostnames on prebuilt / Docker deployments (legacy CNAME-to-Quickly optional for advanced host-Caddy setups)
+* **Open & click tracking** — Pixel tracking and link wrapping; **Outreach Beacon** for custom tracking hostnames on prebuilt / Docker deployments (legacy CNAME-to-Outreach optional for advanced host-Caddy setups)
 * **Full analytics** — Per-campaign stats, per-step performance, open/click/reply rates, and timeline charts
 * **System health dashboard** — Live status for inbox token health, tracking domain reachability, and AI provider connectivity
 
@@ -124,9 +124,9 @@ If this saves you money, please consider dropping a ⭐ — it helps others find
 docker volume create quickly_pgdata   # Postgres data — do once before first start
 
 mkdir quickly && cd quickly
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose.yml
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/Caddyfile
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose.yml
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/Caddyfile
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
 mv .env.example .env
 ```
 
@@ -142,9 +142,9 @@ QUICKLY_SECRET_KEY=<run: python -c "import secrets; print(secrets.token_urlsafe(
 docker compose up -d
 ```
 
-Caddy automatically provisions and renews a Let's Encrypt TLS certificate. Open `https://yourdomain.com` — Quickly is live.
+Caddy automatically provisions and renews a Let's Encrypt TLS certificate. Open `https://yourdomain.com` — Outreach is live.
 
-**Already running Caddy on the server?** Download `docker-compose-not-host.yml` from the same release instead, start with `docker compose -f docker-compose-not-host.yml up -d`, and add `reverse_proxy 127.0.0.1:5050` for your domain in the host Caddyfile. That path is for operators who want **one** app behind host Caddy with on-demand TLS for tracking domains; it is **not** the default recommendation — prefer [**Quickly Beacon**](docs/INSTALL.md#quickly-beacon-recommended-custom-tracking-hostnames) for `track.yourdomain.com`–style links.
+**Already running Caddy on the server?** Download `docker-compose-not-host.yml` from the same release instead, start with `docker compose -f docker-compose-not-host.yml up -d`, and add `reverse_proxy 127.0.0.1:5050` for your domain in the host Caddyfile. That path is for operators who want **one** app behind host Caddy with on-demand TLS for tracking domains; it is **not** the default recommendation — prefer [**Outreach Beacon**](docs/INSTALL.md#outreach-beacon-recommended-custom-tracking-hostnames) for `track.yourdomain.com`–style links.
 
 → [Full VPS guide, firewall, Postgres volume, not-host layout, and Beacon](docs/INSTALL.md#option-b-vps-with-docker-compose)
 
@@ -153,7 +153,7 @@ Caddy automatically provisions and renews a Let's Encrypt TLS certificate. Open 
 ### Option C: Local Development
 
 ```bash
-git clone https://github.com/AbdelftahZowail/Quickly.git
+git clone https://github.com/adityad1997/quickly.git
 cd quickly
 
 python -m venv .venv
@@ -176,13 +176,13 @@ cd frontend && npm install && npm run dev   # UI at http://localhost:5173
 
 ## First Login
 
-On first deploy, visit your Quickly URL — a registration form appears to create the initial admin account. **Registration closes after the first account is created.** Additional users must be invited by an admin from the Settings page.
+On first deploy, visit your Outreach URL — a registration form appears to create the initial admin account. **Registration closes after the first account is created.** Additional users must be invited by an admin from the Settings page.
 
 ---
 
 ## Connecting Inboxes
 
-Quickly supports Gmail (via Google OAuth), Microsoft 365 / Outlook (via Azure OAuth), and any SMTP relay (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. All three inbox types can be mixed freely in the same campaign.
+Outreach supports Gmail (via Google OAuth), Microsoft 365 / Outlook (via Azure OAuth), and any SMTP relay (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. All three inbox types can be mixed freely in the same campaign.
 
 * → [Connect Gmail inboxes (Google Cloud OAuth setup)](docs/INSTALL.md#step-3a-connect-gmail-inboxes)
 * → [Connect Office 365 / Outlook inboxes (Azure portal setup)](docs/INSTALL.md#step-3b-connect-office-365--outlook-inboxes)
@@ -251,20 +251,20 @@ The UI shows a dismissible notice strip with product announcements and a "newer 
 
 ## Frequently Asked Questions
 
-**Is Quickly really free?**
-Yes. Quickly is MIT licensed. You pay nothing to Quickly — your only cost is the server you host it on (or Railway's free tier).
+**Is Outreach really free?**
+Yes. Outreach is MIT licensed. You pay nothing to Outreach — your only cost is the server you host it on (or Railway's free tier).
 
-**How does Quickly compare to Instantly?**
-Quickly covers Instantly's core features: multi-step sequences, inbox rotation, A/B testing, AI reply classification, open/click tracking, and a unified inbox. The difference is ownership — your data stays on your server, and there are no monthly fees or seat limits. Looking for Instantly, Smartlead, or Lemlist alternatives? If your focus is cold email outreach, Quickly delivers the same experience without the SaaS price tag.
+**How does Outreach compare to Instantly?**
+Outreach covers Instantly's core features: multi-step sequences, inbox rotation, A/B testing, AI reply classification, open/click tracking, and a unified inbox. The difference is ownership — your data stays on your server, and there are no monthly fees or seat limits. Looking for Instantly, Smartlead, or Lemlist alternatives? If your focus is cold email outreach, Outreach delivers the same experience without the SaaS price tag.
 
-**Does Quickly support Microsoft 365 / Outlook?**
-Yes. Quickly connects to Gmail via Google OAuth, to Microsoft 365, Office 365, and personal Outlook.com accounts via Microsoft Graph, and to any SMTP relay (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. All inbox types can be mixed in the same campaign.
+**Does Outreach support Microsoft 365 / Outlook?**
+Yes. Outreach connects to Gmail via Google OAuth, to Microsoft 365, Office 365, and personal Outlook.com accounts via Microsoft Graph, and to any SMTP relay (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. All inbox types can be mixed in the same campaign.
 
-**Can I use Quickly without a custom domain?**
-Yes. You can deploy on Railway and use the generated subdomain, or run Quickly over plain HTTP without `CADDY_HOST` set.
+**Can I use Outreach without a custom domain?**
+Yes. You can deploy on Railway and use the generated subdomain, or run Outreach over plain HTTP without `CADDY_HOST` set.
 
 **Does AI reply classification require an OpenAI key?**
-No. Quickly supports 19 AI providers including Anthropic, Google Gemini, Mistral, Groq, Cohere, and Ollama — which lets you run classification fully locally with no external API calls.
+No. Outreach supports 19 AI providers including Anthropic, Google Gemini, Mistral, Groq, Cohere, and Ollama — which lets you run classification fully locally with no external API calls.
 
 ---
 
@@ -272,7 +272,7 @@ No. Quickly supports 19 AI providers including Anthropic, Google Gemini, Mistral
 
 Contributions are welcome — bug reports, feature requests, and pull requests. See [docs/CONTRIBUTORS.md](docs/CONTRIBUTORS.md) for setup instructions and contribution guidelines.
 
-If Quickly is saving you money or replacing a paid tool in your workflow, a ⭐ goes a long way toward helping others find it.
+If Outreach is saving you money or replacing a paid tool in your workflow, a ⭐ goes a long way toward helping others find it.
 
 ---
 

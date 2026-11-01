@@ -145,7 +145,7 @@ def build_notification(event_type: str, data: dict[str, Any]) -> dict[str, Any]:
                 f"Please reconnect the inbox."
             )
     else:
-        title = f"Quickly notification — {event_type}"
+        title = f"Outreach notification — {event_type}"
         message = f"Event: {event_type} at {ts}"
 
     return {
@@ -435,7 +435,7 @@ async def dispatch_notification(
             info = build_notification(event_type, data)
             body = info["message"] + (
                 f"\n\n—\n"
-                f"View in Quickly: {_deep_link('/notifications')}\n"
+                f"View in Outreach: {_deep_link('/notifications')}\n"
             )
             if info.get("lead_id"):
                 body += f"View lead: {_deep_link(f'/leads/{info['lead_id']}')}\n"

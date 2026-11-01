@@ -1090,7 +1090,7 @@ export default function Settings() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-sm font-medium">
-                  Quickly{' '}
+                  Outreach{' '}
                   <span className="font-mono">{about.version || '—'}</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -1252,7 +1252,7 @@ export default function Settings() {
         <section id="settings-gmail-sync" className="mb-10 scroll-mt-6">
           <h2 className="text-lg font-semibold mb-1 border-b pb-2">Gmail Sync</h2>
           <p className="text-xs text-gray-500 mb-4">
-            Configure how Quickly detects replies from Gmail inboxes. Optional — polling works
+            Configure how Outreach detects replies from Gmail inboxes. Optional — polling works
             without these settings, but push notifications make reply detection instant.
           </p>
           <div className="space-y-4">
@@ -2343,7 +2343,7 @@ export default function Settings() {
         <section id="settings-mcp" className="mb-10 scroll-mt-6">
           <h2 className="text-lg font-semibold mb-1 border-b pb-2">MCP (AI agents)</h2>
           <p className="text-xs text-gray-500 mb-4">
-            Quickly exposes a remote MCP endpoint over HTTPS. Create an API key under API keys, then point Cursor at it with
+            Outreach exposes a remote MCP endpoint over HTTPS. Create an API key under API keys, then point Cursor at it with
             <code className="mx-1 text-[10px] bg-gray-100 dark:bg-gray-800 px-1 rounded">npx mcp-remote</code>
             (Node 18+). No Python install on your machine.
           </p>

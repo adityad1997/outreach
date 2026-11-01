@@ -1,4 +1,4 @@
-# Contributing to Quickly
+# Contributing to Outreach
 
 Thanks for wanting to help! The full contributor guide lives in
 **[docs/CONTRIBUTORS.md](docs/CONTRIBUTORS.md)** — local setup, project structure,
@@ -9,8 +9,8 @@ tests, code style, and PR guidelines.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-username>/Quickly.git
-cd Quickly
+git clone https://github.com/<your-username>/Outreach.git
+cd Outreach
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```

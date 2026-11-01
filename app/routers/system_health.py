@@ -394,7 +394,7 @@ async def get_system_health(db: AsyncSession = Depends(get_db)):
             note = None
             if not ok:
                 note = (
-                    "Registration count still below Quickly after sync; "
+                    "Registration count still below Outreach after sync; "
                     "check Beacon logs and network."
                 )
             elif actual2 > expected:

@@ -34,7 +34,7 @@ function sanitizeHtml(html) {
 }
 
 /**
- * Strip Quickly tracking artefacts from HTML:
+ * Strip Outreach tracking artefacts from HTML:
  * 1. Remove <img> tags whose src contains /o/ (open tracking pixels).
  * 2. Replace <a> tags whose href contains /c/ (click tracking redirects)
  *    with the original destination URL, if available, or strip the href.

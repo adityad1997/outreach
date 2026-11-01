@@ -12,11 +12,11 @@ import type {
 export class QuicklyApi implements ICredentialType {
   name = 'quicklyApi';
 
-  displayName = 'Quickly API';
+  displayName = 'Outreach API';
 
   icon: Icon = 'fa:paper-plane';
 
-  documentationUrl = 'https://github.com/your-org/Quickly/blob/main/docs/API.md';
+  documentationUrl = 'https://github.com/adityad1997/quickly/blob/main/docs/API.md';
 
   /**
    * Programmatic auth avoids n8n expression bugs (regex in {{ }} caused "invalid syntax"
@@ -62,8 +62,8 @@ export class QuicklyApi implements ICredentialType {
       name: 'baseUrl',
       type: 'string',
       default: 'http://localhost:8000',
-      placeholder: 'https://your-quickly-host.com',
-      description: 'Root URL of your Quickly instance (no trailing slash required)',
+      placeholder: 'https://your-outreach-host.com',
+      description: 'Root URL of your Outreach instance (no trailing slash required)',
       required: true,
     },
     {
@@ -97,7 +97,7 @@ export class QuicklyApi implements ICredentialType {
           authentication: ['apiKey'],
         },
       },
-      description: 'Create under Settings → API Keys in Quickly',
+      description: 'Create under Settings → API Keys in Outreach',
     },
     {
       displayName: 'Access Token',

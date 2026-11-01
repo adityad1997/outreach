@@ -762,7 +762,7 @@ async def oauth_connected(email: str = "", sig: str = ""):
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
     </div>
     <h1>Successfully Connected!</h1>
-    <p>Your inbox <span class="email">{email}</span> has been connected. You can close this tab and return to Quickly.</p>
+    <p>Your inbox <span class="email">{email}</span> has been connected. You can close this tab and return to Outreach.</p>
   </div>
 </body>
 </html>"""

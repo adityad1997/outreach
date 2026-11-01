@@ -20,10 +20,10 @@ const steps = [
   {
     id: 'welcome',
     icon: <RiRocketLine size={40} />,
-    title: 'Welcome to Quickly',
+    title: 'Welcome to Outreach',
     subtitle: 'Your email outreach platform',
     description:
-      'Quickly helps you send personalized cold email campaigns at scale using your Gmail accounts. ' +
+      'Outreach helps you send personalized cold email campaigns at scale using your Gmail accounts. ' +
       'This quick tour will walk you through the key features so you can hit the ground running.',
     highlights: [
       'Send multi-step email sequences automatically',
@@ -57,7 +57,7 @@ const steps = [
     title: 'Create Campaigns',
     subtitle: 'Multi-step email sequences',
     description:
-      'Campaigns are the core of Quickly. Each campaign contains a sequence of emails that are ' +
+      'Campaigns are the core of Outreach. Each campaign contains a sequence of emails that are ' +
       'sent automatically at intervals you define.',
     highlights: [
       'Build multi-step sequences (initial email + follow-ups)',
@@ -94,7 +94,7 @@ const steps = [
     title: 'Smart Scheduling',
     subtitle: 'Queue engine & strategies',
     description:
-      'Quickly\'s scheduling engine automatically queues emails based on your inbox limits, ' +
+      'Outreach\'s scheduling engine automatically queues emails based on your inbox limits, ' +
       'campaign settings, and sending windows. No manual scheduling needed.',
     highlights: [
       'Priority mode — drag campaigns to set send order',
@@ -278,7 +278,7 @@ export default function Onboarding() {
           {/* logo watermark for welcome step */}
           {current === 0 && (
             <div className="flex justify-center mb-4">
-              <img src={logo} alt="Quickly" className="h-12 w-12 opacity-80" />
+              <img src={logo} alt="Outreach" className="h-12 w-12 opacity-80" />
             </div>
           )}
 

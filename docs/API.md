@@ -1,10 +1,10 @@
 # API Reference
 
-Quickly exposes a JSON REST API over HTTP. **All endpoints require authentication** via a Bearer token (JWT access token) or the httpOnly `access_token` cookie set at login.
+Outreach exposes a JSON REST API over HTTP. **All endpoints require authentication** via a Bearer token (JWT access token) or the httpOnly `access_token` cookie set at login.
 
 All request/response bodies use `Content-Type: application/json`.
 
-**MCP (Model Context Protocol):** Quickly also serves a **Streamable HTTP** MCP endpoint at **`GET/POST /api/mcp`** for AI agents (leads tools). It uses the same API key or Bearer authentication as the REST API. See **[docs/MCP.md](MCP.md)** for client setup (`mcp-remote`, Cursor) and tool list.
+**MCP (Model Context Protocol):** Outreach also serves a **Streamable HTTP** MCP endpoint at **`GET/POST /api/mcp`** for AI agents (leads tools). It uses the same API key or Bearer authentication as the REST API. See **[docs/MCP.md](MCP.md)** for client setup (`mcp-remote`, Cursor) and tool list.
 
 **n8n:** To drive this API from **self-hosted n8n** with a built-in node (resources, operations, credentials), see **[N8N.md](N8N.md)** and the **[n8n package README](../n8n-node/README.md)** for install and usage.
 
@@ -1024,7 +1024,7 @@ The UI **Settings → MCP (AI agents)** loads this endpoint and offers a copy ac
 
 ## Model Context Protocol (MCP)
 
-Quickly embeds an MCP server (**FastMCP**, stateless Streamable HTTP) at **`/api/mcp`**. Clients such as Cursor typically connect via **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** pointing at `https://<your-host>/api/mcp` with `--transport http-only`.
+Outreach embeds an MCP server (**FastMCP**, stateless Streamable HTTP) at **`/api/mcp`**. Clients such as Cursor typically connect via **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** pointing at `https://<your-host>/api/mcp` with `--transport http-only`.
 
 ### Authentication
 
@@ -1055,7 +1055,7 @@ Step-by-step instructions (Cursor, Bearer vs API key, local `--allow-http`, trou
 
 ## Webhooks
 
-Quickly supports multiple outbound webhooks. Each webhook subscribes to any combination of event types and is called with a signed JSON body.
+Outreach supports multiple outbound webhooks. Each webhook subscribes to any combination of event types and is called with a signed JSON body.
 
 ### `GET /api/settings/webhooks/events`
 
@@ -1207,7 +1207,7 @@ Disconnect an Office 365 account. Removes stored tokens and reverts the inbox pr
 
 ## App OAuth (Login with Google/Microsoft)
 
-These endpoints allow users to log in to Quickly itself using their Google or Microsoft account instead of a username/password. They are separate from the inbox-connection OAuth flows.
+These endpoints allow users to log in to Outreach itself using their Google or Microsoft account instead of a username/password. They are separate from the inbox-connection OAuth flows.
 
 ### `GET /oauth/app/google/authorize`
 
@@ -1310,7 +1310,7 @@ A missing or wrong token returns `401 Unauthorized`. Existing push subscriptions
 
 ## Notifications
 
-Email notifications let Quickly send you an email (via your connected Gmail or Microsoft account) when specific events occur.
+Email notifications let Outreach send you an email (via your connected Gmail or Microsoft account) when specific events occur.
 
 ### `GET /api/notifications/config`
 

@@ -1,6 +1,6 @@
-# Quickly frontend design guide
+# Outreach frontend design guide
 
-This document describes how the Quickly UI is built today. **New pages and edits should match these patterns** so the product stays visually and behaviorally consistent.
+This document describes how the Outreach UI is built today. **New pages and edits should match these patterns** so the product stays visually and behaviorally consistent.
 
 ## Stack
 

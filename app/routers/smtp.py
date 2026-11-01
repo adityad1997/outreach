@@ -414,9 +414,9 @@ async def send_test_email(
     def _do_send():
         return _send_via_smtp(
             to_email=to_email,
-            subject="Quickly test email",
+            subject="Outreach test email",
             body=(
-                "This is a test message sent by Quickly's \"Send test email\" action.\n\n"
+                "This is a test message sent by Outreach's \"Send test email\" action.\n\n"
                 "If you can read this, the SMTP inbox is delivering mail end to end."
             ),
             from_email=from_email,

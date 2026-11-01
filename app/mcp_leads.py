@@ -23,7 +23,7 @@ log = logging.getLogger("quickly.mcp_leads")
 leads_mcp = FastMCP(
     "quickly-leads",
     instructions=(
-        "Quickly leads API tools. Authenticate MCP HTTP requests with X-API-Key "
+        "Outreach leads API tools. Authenticate MCP HTTP requests with X-API-Key "
         "(Settings → API Keys) or Authorization: Bearer (JWT)."
     ),
     # Default FastMCP host is 127.0.0.1, which enables MCP DNS-rebinding checks with

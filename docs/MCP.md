@@ -1,6 +1,6 @@
-# Model Context Protocol (MCP) — Quickly Leads
+# Model Context Protocol (MCP) — Outreach Leads
 
-Quickly exposes a **remote MCP server** over **Streamable HTTP** so AI clients (Cursor, Claude Desktop, etc.) can call lead-related tools without running a local Python MCP process. The server is part of the main FastAPI app and uses the same authentication as the REST API.
+Outreach exposes a **remote MCP server** over **Streamable HTTP** so AI clients (Cursor, Claude Desktop, etc.) can call lead-related tools without running a local Python MCP process. The server is part of the main FastAPI app and uses the same authentication as the REST API.
 
 ---
 
@@ -46,7 +46,7 @@ Standalone lead creation is not exposed as a separate MCP tool; use `add_campaig
 
 ## Cursor and `mcp-remote`
 
-Most MCP clients only support **stdio**. Use **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** so the editor runs a small Node bridge to Quickly’s HTTPS endpoint.
+Most MCP clients only support **stdio**. Use **[mcp-remote](https://www.npmjs.com/package/mcp-remote)** so the editor runs a small Node bridge to Outreach’s HTTPS endpoint.
 
 ### From the UI
 
@@ -99,7 +99,7 @@ Use a header without spaces after the colon (Cursor/Windows caveat per mcp-remot
 
 ### Local HTTP (development only)
 
-If Quickly is only on `http://localhost:8000`, add **`--allow-http`** after the URL in `args` (see mcp-remote README). Do not use this on untrusted networks.
+If Outreach is only on `http://localhost:8000`, add **`--allow-http`** after the URL in `args` (see mcp-remote README). Do not use this on untrusted networks.
 
 ---
 
@@ -121,9 +121,9 @@ See [API.md — Settings](API.md#settings) for the full Settings API.
 
 | Symptom | Likely cause |
 |---------|----------------|
-| **404 / 405** on `/api/mcp` | Old deployment without the dedicated MCP routes; upgrade Quickly. |
+| **404 / 405** on `/api/mcp` | Old deployment without the dedicated MCP routes; upgrade Outreach. |
 | **401** | Missing or invalid `X-API-Key` / Bearer token. |
-| **421 Misdirected Request** / “Invalid Host header” | Fixed in current Quickly: MCP DNS rebinding checks are disabled for the public Host your reverse proxy sends. Upgrade if you still see this. |
+| **421 Misdirected Request** / “Invalid Host header” | Fixed in current Outreach: MCP DNS rebinding checks are disabled for the public Host your reverse proxy sends. Upgrade if you still see this. |
 | **Connection / TLS errors** | Check `BASE_URL`, certificate, and that the client can reach the host. |
 
 ---

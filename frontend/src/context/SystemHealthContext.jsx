@@ -298,7 +298,7 @@ function buildChecks(d) {
         if (beaconStatLvl === 'ok') beaconStatLvl = 'warning';
         beaconIssues.push({
           level: 'warning',
-          text: `Beacon registration count still mismatched for "${name}" (Quickly expects ${inbox.beacon_registration_expected}, Beacon has ${inbox.beacon_registration_actual}).`,
+          text: `Beacon registration count still mismatched for "${name}" (Outreach expects ${inbox.beacon_registration_expected}, Beacon has ${inbox.beacon_registration_actual}).`,
           fix: 'The server attempted a full resync during this health check. If this persists, check connectivity to Beacon.',
           action: { label: 'Open Inboxes', to: '/inboxes' },
         });

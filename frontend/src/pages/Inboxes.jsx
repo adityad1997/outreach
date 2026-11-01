@@ -10,9 +10,9 @@ import { useSystemHealth } from '../context/SystemHealthContext';
 /** Backend stores jitter in seconds (cap 600). Forms show minutes and convert on change / save. */
 const JITTER_MAX_MINUTES = 10;
 
-/** Full Beacon setup guide in the Quickly repo (INSTALL.md). */
+/** Full Beacon setup guide in this repo (INSTALL.md). */
 const BEACON_SETUP_DOCS_URL =
-  'https://github.com/AbdelftahZowail/Quickly/blob/main/docs/INSTALL.md#quickly-beacon-recommended-custom-tracking-hostnames';
+  'https://github.com/adityad1997/quickly/blob/main/docs/INSTALL.md#outreach-beacon-recommended-custom-tracking-hostnames';
 
 function CollapsibleInfo({ children }) {
   const [open, setOpen] = useState(false);
@@ -60,7 +60,7 @@ const STAGE_LABELS = {
 function diagnosticReportToText(report) {
   if (!report) return '';
   const lines = [
-    'Quickly SMTP diagnostic report',
+    'Outreach SMTP diagnostic report',
     `Target: ${report.host}:${report.port}  mode=${report.mode}`,
     `Result: ${report.ok ? 'PASS' : 'FAIL'}  (${report.duration_ms ?? 0} ms)`,
     '',
@@ -575,7 +575,7 @@ function InboxTrackingOptions({
         <div className="ml-6 min-w-0 max-w-full border-l-2 border-gray-200 pl-3 py-0.5">
           <CollapsibleInfo>
             <p>
-              Open, click, and unsubscribe links use your Quickly app URL{' '}
+              Open, click, and unsubscribe links use your Outreach app URL{' '}
               <span className="text-gray-500 font-mono break-all">({hostHint})</span>. No Beacon service and no extra DNS records are required.
             </p>
           </CollapsibleInfo>
@@ -634,7 +634,7 @@ function InboxTrackingOptions({
           <CollapsibleInfo>
             <p className="font-medium text-gray-700">How Beacon works</p>
             <p>
-              Run the Beacon service on the HTTPS hostname you want for tracking links. While Quickly is not connected yet, open Beacon&apos;s root URL in a browser and copy the <strong>setup URL</strong> (it includes{' '}
+              Run the Beacon service on the HTTPS hostname you want for tracking links. While Outreach is not connected yet, open Beacon&apos;s root URL in a browser and copy the <strong>setup URL</strong> (it includes{' '}
               <code className="bg-gray-100 px-0.5 rounded">?token=</code>
               ). Paste it above and click Connect. On Beacon, set{' '}
               <code className="bg-gray-100 px-0.5 rounded">BEACON_PUBLIC_BASE_URL</code>
@@ -647,7 +647,7 @@ function InboxTrackingOptions({
                 rel="noopener noreferrer"
                 className="text-blue-700 hover:underline break-all"
               >
-                Full setup guide (Quickly repo → INSTALL.md)
+                Full setup guide (Outreach repo → INSTALL.md)
               </a>
             </p>
           </CollapsibleInfo>
@@ -703,7 +703,7 @@ function InboxTrackingOptions({
             )}
             <CollapsibleInfo>
               <p className="font-medium text-gray-700">DNS setup (CNAME)</p>
-              <p>Add a <code>CNAME</code> at your DNS host pointing your tracking hostname at this Quickly server:</p>
+              <p>Add a <code>CNAME</code> at your DNS host pointing your tracking hostname at this Outreach server:</p>
               <pre className="bg-white border rounded p-2 overflow-x-auto whitespace-pre-wrap break-all text-gray-700 text-[11px]">
                 {`${(trackingDomain || '').trim() || 'mail.yourdomain.com'}  CNAME  ${cnameTarget || 'your-app-host'}.`}
               </pre>

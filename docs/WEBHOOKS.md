@@ -1,12 +1,12 @@
 # Webhooks
 
-Quickly can notify external services of important events via outbound webhooks. This is useful for integrating with Slack, Zapier, CRMs, or any custom automation.
+Outreach can notify external services of important events via outbound webhooks. This is useful for integrating with Slack, Zapier, CRMs, or any custom automation.
 
 ---
 
 ## Overview
 
-- Webhooks are **outbound only** — Quickly POSTs JSON to your endpoint when events occur.
+- Webhooks are **outbound only** — Outreach POSTs JSON to your endpoint when events occur.
 - Calls are **asynchronous** — failures are logged but never interrupt email sending or sync.
 - **Multiple webhooks** supported — add as many endpoints as you need.
 - Each webhook **subscribes to specific event types** — or leave the events list empty to receive everything.
@@ -407,7 +407,7 @@ def quickly_webhook():
     elif event == "token_expired":
         text = f"Token expired for {data['inbox_email']} — re-authorize!"
     else:
-        text = f"Quickly event: {event}"
+        text = f"Outreach event: {event}"
 
     requests.post(SLACK_WEBHOOK, json={"text": text})
     return jsonify(ok=True)
@@ -426,7 +426,7 @@ def quickly_webhook():
 
 ## Adding Custom Event Types
 
-If you're contributing to Quickly and need a new webhook event:
+If you're contributing to Outreach and need a new webhook event:
 
 1. Add the event name to `WEBHOOK_EVENT_TYPES` in `app/models.py`.
 2. Fire it by calling `fire_webhook_event(db, event_type, data)` from your code.

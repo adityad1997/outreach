@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
         schedule.shutdown()
 
 
-app = FastAPI(title="Quickly", lifespan=lifespan)
+app = FastAPI(title="Outreach", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Security middleware (CSP, HSTS, X-Frame-Options, …)

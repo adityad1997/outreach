@@ -1,6 +1,6 @@
 # n8n-nodes-quickly
 
-Community node package for **Quickly** (this repository) — call the Quickly JSON REST API from n8n workflows (campaigns, leads, sequences, inboxes, webhooks, Unibox, settings, and more).
+Community node package for **Outreach** (this repository) — call the Outreach JSON REST API from n8n workflows (campaigns, leads, sequences, inboxes, webhooks, Unibox, settings, and more).
 
 Full HTTP details (paths, bodies, query params, auth) are in the main repo: **[`docs/API.md`](../docs/API.md)**. A short **n8n-focused overview** (with a link back here) lives in **[`docs/N8N.md`](../docs/N8N.md)**.
 
@@ -9,8 +9,8 @@ Full HTTP details (paths, bodies, query params, auth) are in the main repo: **[`
 ## Requirements
 
 - **n8n** self-hosted (community nodes enabled). Tested with n8n **2.x**; should work on recent **1.x** builds that support `allowArbitraryValues` on options fields.
-- A running **Quickly** instance reachable from n8n (same host, LAN, or public URL).
-- **Authentication:** Quickly API key (`X-API-Key`) or JWT access token from `POST /api/auth/login` (`Authorization: Bearer …`).
+- A running **Outreach** instance reachable from n8n (same host, LAN, or public URL).
+- **Authentication:** Outreach API key (`X-API-Key`) or JWT access token from `POST /api/auth/login` (`Authorization: Bearer …`).
 
 ---
 
@@ -53,7 +53,7 @@ n8n-nodes-quickly/
 ├── dist/
 │   ├── credentials/
 │   └── nodes/
-│       └── Quickly/
+│       └── Outreach/
 └── node_modules/
 ```
 
@@ -67,24 +67,24 @@ If you publish `n8n-nodes-quickly` to npm with the keyword **`n8n-community-node
 
 ---
 
-## Credentials: Quickly API
+## Credentials: Outreach API
 
-Create credentials in n8n: **Quickly API** (`quicklyApi`).
+Create credentials in n8n: **Outreach API** (`quicklyApi`).
 
 | Field | Description |
 |--------|-------------|
-| **Base URL** | Root URL of Quickly, e.g. `https://quickly.example.com` or `http://localhost:8000`. Trailing slashes are stripped automatically. |
+| **Base URL** | Root URL of Outreach, e.g. `https://quickly.example.com` or `http://localhost:8000`. Trailing slashes are stripped automatically. |
 | **Authentication** | **API Key** (recommended for automation) or **Bearer Token (JWT)**. |
-| **API Key** | Raw key from Quickly **Settings → API Keys** (`qk_live_…`). Sent as `X-API-Key`. |
-| **Access Token** | JWT from `POST /api/auth/login`. Sent as `Authorization: Bearer …`. Tokens expire (default 30 minutes); refresh via Quickly’s auth flow if needed. |
+| **API Key** | Raw key from Outreach **Settings → API Keys** (`qk_live_…`). Sent as `X-API-Key`. |
+| **Access Token** | JWT from `POST /api/auth/login`. Sent as `Authorization: Bearer …`. Tokens expire (default 30 minutes); refresh via Outreach’s auth flow if needed. |
 
 **Connection test** calls `GET /api/auth/me`. It uses programmatic auth (no fragile expressions), so both API key and Bearer modes are supported.
 
 ---
 
-## Node: Quickly
+## Node: Outreach
 
-Add the **Quickly** node to a workflow and attach **Quickly API** credentials.
+Add the **Outreach** node to a workflow and attach **Outreach API** credentials.
 
 ### Parameters
 
@@ -95,7 +95,7 @@ Optional and conditional fields appear based on resource + operation.
 
 ### Dynamic lists and manual IDs
 
-Many fields load options from Quickly (campaigns, inboxes, leads, sequences, etc.). Those fields support **arbitrary values**: you can **select from the list or type an ID** (or an n8n expression) when the UI allows it.
+Many fields load options from Outreach (campaigns, inboxes, leads, sequences, etc.). Those fields support **arbitrary values**: you can **select from the list or type an ID** (or an n8n expression) when the UI allows it.
 
 **Unibox → Thread** (get thread / mark read): the loader stores values as `inbox_id||thread_id`. You can pick from the list or type that form manually, e.g. `3||abc123thread`.
 
@@ -141,7 +141,7 @@ Endpoints that are intentionally **not** exposed here include browser OAuth redi
 
 ## Rate limits and errors
 
-Quickly may return **429** (rate limit), **401** (auth), **404**, **422**, etc. See **Error Responses** in [`docs/API.md`](../docs/API.md).
+Outreach may return **429** (rate limit), **401** (auth), **404**, **422**, etc. See **Error Responses** in [`docs/API.md`](../docs/API.md).
 
 ---
 

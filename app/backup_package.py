@@ -122,7 +122,7 @@ def _reject_legacy_magic(raw: bytes) -> None:
     if len(raw) >= len(LEGACY_MAGIC) and raw[: len(LEGACY_MAGIC)] == LEGACY_MAGIC:
         raise BackupPackageError(
             "This backup uses an older file format. Export a new .qbk from Settings → Backup "
-            "on a current Quickly instance."
+            "on a current Outreach instance."
         )
 
 
@@ -182,11 +182,11 @@ def pack_backup(
 def _header_after_hint(raw: bytes) -> tuple[int, int, str]:
     """Return (flag, position after hint bytes, hint str)."""
     if len(raw) < len(MAGIC) + 1 + 4:
-        raise BackupPackageError("File too small to be a Quickly backup")
+        raise BackupPackageError("File too small to be an Outreach backup")
     _reject_legacy_magic(raw)
     if raw[: len(MAGIC)] != MAGIC:
         raise BackupPackageError(
-            "Not a Quickly backup file (.qbk). Download a new backup from Settings → Backup."
+            "Not an Outreach backup file (.qbk). Download a new backup from Settings → Backup."
         )
     pos = len(MAGIC)
     flag = raw[pos]

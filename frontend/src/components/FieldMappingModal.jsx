@@ -11,7 +11,7 @@ import {
 } from '../utils/leadImportMapping';
 
 /**
- * Map Your Fields modal — CSV/paste column → Quickly field mapping.
+ * Map Your Fields modal — CSV/paste column → Outreach field mapping.
  *
  * props:
  *  - headers, rows, samples
@@ -56,7 +56,7 @@ export default function FieldMappingModal({ headers, rows, samples, onBack, onCo
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">Map Your Fields</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Review and configure how your CSV columns map to Quickly fields. Unmapped columns are skipped.
+            Review and configure how your CSV columns map to Outreach fields. Unmapped columns are skipped.
           </p>
         </div>
 
@@ -66,7 +66,7 @@ export default function FieldMappingModal({ headers, rows, samples, onBack, onCo
               <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b">
                 <th className="py-2 pr-3 w-[28%]">CSV Column</th>
                 <th className="py-2 pr-3 w-[8%]" />
-                <th className="py-2 pr-3 w-[32%]">Maps To Quickly Field</th>
+                <th className="py-2 pr-3 w-[32%]">Maps To Outreach Field</th>
                 <th className="py-2 w-[32%]">Preview</th>
               </tr>
             </thead>

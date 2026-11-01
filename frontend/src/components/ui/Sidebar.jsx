@@ -19,6 +19,9 @@ import { useNotifications } from '../../context/NotificationsContext';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useSystemHealth } from '../../context/SystemHealthContext';
 
+/** Fork repo for bug/feature issue links (owner/name). */
+const GITHUB_REPO = 'adityad1997/quickly';
+
 // links including icons
 const links = [
   { to: '/analytics', label: 'Analytics', icon: <RiLineChartLine size={20} /> },
@@ -75,9 +78,9 @@ function buildBugUrl() {
     '**Environment**',
     `- OS: ${getOS()}`,
     `- Browser: ${getBrowser()}`,
-    `- Quickly version: ${APP_VERSION}`,
+    `- Outreach version: ${APP_VERSION}`,
   ].join('\n');
-  return `https://github.com/AbdelftahZowail/Quickly/issues/new?labels=bug&title=%5BBug%5D%20&body=${encodeURIComponent(body)}`;
+  return `https://github.com/${GITHUB_REPO}/issues/new?labels=bug&title=%5BBug%5D%20&body=${encodeURIComponent(body)}`;
 }
 
 function buildFeatureUrl() {
@@ -92,7 +95,7 @@ function buildFeatureUrl() {
     '',
     '**Additional context**',
   ].join('\n');
-  return `https://github.com/AbdelftahZowail/Quickly/issues/new?labels=enhancement&title=%5BFeature%5D%20&body=${encodeURIComponent(body)}`;
+  return `https://github.com/${GITHUB_REPO}/issues/new?labels=enhancement&title=%5BFeature%5D%20&body=${encodeURIComponent(body)}`;
 }
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -136,9 +139,9 @@ export default function Sidebar({ collapsed, onToggle }) {
         }`}
         title="Home"
       >
-        <img src={logo} alt="Quickly logo" className="h-8 w-8" />
+        <img src={logo} alt="Outreach logo" className="h-8 w-8" />
         {!collapsed && (
-          <span className="text-primary font-extrabold text-xl">Quickly</span>
+          <span className="text-primary font-extrabold text-xl">Outreach</span>
         )}
       </NavLink>
       <div className="flex flex-col gap-2">

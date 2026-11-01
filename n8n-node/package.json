@@ -1,13 +1,13 @@
 {
   "name": "n8n-nodes-quickly",
   "version": "1.0.0",
-  "description": "n8n community node for the Quickly email outreach REST API",
+  "description": "n8n community node for the Outreach email outreach REST API",
   "license": "MIT",
-  "homepage": "https://github.com/your-org/Quickly",
+  "homepage": "https://github.com/adityad1997/quickly",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
-    "quickly",
+    "outreach",
     "email",
     "campaigns",
     "leads"
@@ -15,7 +15,7 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/Quickly.git"
+    "url": "https://github.com/adityad1997/quickly.git"
   },
   "main": "dist/nodes/Quickly/Quickly.node.js",
   "scripts": {

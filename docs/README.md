@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
-<h1 align="center">Quickly — Open-Source Cold Email Platform</h1>
+<h1 align="center">Outreach — Open-Source Cold Email Platform</h1>
 
 <p align="center"><strong>Own your cold email infrastructure. No SaaS fees. No per-seat pricing. No data leaving your server.</strong></p>
 
@@ -20,19 +20,19 @@
 
 ---
 
-## What Is Quickly?
+## What Is Outreach?
 
-**Quickly is a free, open-source cold email platform you self-host on your own server.** It replaces paid cold email tools like Instantly, Smartlead, and Lemlist with a single Docker deployment that you own outright — unlimited contacts, unlimited campaigns, unlimited sends.
+**Outreach is a free, open-source cold email platform you self-host on your own server.** It replaces paid cold email tools like Instantly, Smartlead, and Lemlist with a single Docker deployment that you own outright — unlimited contacts, unlimited campaigns, unlimited sends.
 
-If you've ever asked *"Is there a self-hosted alternative to Instantly?"* or *"How do I run cold email campaigns without paying per contact?"* — Quickly is your answer.
+If you've ever asked *"Is there a self-hosted alternative to Instantly?"* or *"How do I run cold email campaigns without paying per contact?"* — Outreach is your answer.
 
-> **Quickly gives sales teams, agencies, and indie hackers the same multi-step sequencing, inbox rotation, AI reply detection, and analytics as enterprise tools — at zero monthly cost.**
+> **Outreach gives sales teams, agencies, and indie hackers the same multi-step sequencing, inbox rotation, AI reply detection, and analytics as enterprise tools — at zero monthly cost.**
 
 ---
 
-## Why Teams Choose Quickly Over Paid Cold Email Tools
+## Why Teams Choose Outreach Over Paid Cold Email Tools
 
-| What you're paying for today | What Quickly gives you instead |
+| What you're paying for today | What Outreach gives you instead |
 |---|---|
 | $97–$500/month SaaS fees (Instantly, Smartlead, Lemlist) | Deploy free on Railway or any PaaS — or self-host on your own server |
 | Per-seat pricing that scales against you | Unlimited team members, unlimited contacts |
@@ -48,25 +48,25 @@ If you've ever asked *"Is there a self-hosted alternative to Instantly?"* or *"H
 Build campaigns with unlimited follow-up steps. Set custom wait days between each touch, toggle thread continuation, and write HTML or plain-text bodies per step. Every sequence element is fully configurable.
 
 ### A/B Testing Built In
-Create multiple subject line or body variants per sequence step. Quickly randomly selects a variant at send time and tracks open rates, click rates, and reply rates per variant — so you always know what messaging wins.
+Create multiple subject line or body variants per sequence step. Outreach randomly selects a variant at send time and tracks open rates, click rates, and reply rates per variant — so you always know what messaging wins.
 
 ### Smart Inbox Rotation, Warm-Up & Jitter
-Spread sends across as many inboxes as you want — **Gmail, Microsoft, and generic SMTP accounts are all supported**, including personal Outlook.com addresses, business Microsoft 365 / Office 365 accounts, and relays like Amazon SES. Quickly's queue engine respects per-inbox daily limits, business-day schedules, configurable sending windows, and per-inbox cooldowns. New accounts? The **ramp-up warm-up** gradually increases daily send volume over a configurable period to protect deliverability. **Random jitter** adds a configurable random delay (up to N seconds) to each scheduled send time so your outreach doesn't fire in perfectly uniform bursts — configurable per inbox.
+Spread sends across as many inboxes as you want — **Gmail, Microsoft, and generic SMTP accounts are all supported**, including personal Outlook.com addresses, business Microsoft 365 / Office 365 accounts, and relays like Amazon SES. Outreach's queue engine respects per-inbox daily limits, business-day schedules, configurable sending windows, and per-inbox cooldowns. New accounts? The **ramp-up warm-up** gradually increases daily send volume over a configurable period to protect deliverability. **Random jitter** adds a configurable random delay (up to N seconds) to each scheduled send time so your outreach doesn't fire in perfectly uniform bursts — configurable per inbox.
 
 ### AI-Powered Reply Classification
 Every reply is automatically classified by AI into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`. Supports 19 AI providers including OpenAI, Anthropic Claude, Google Gemini, Mistral, Groq, and Ollama (for fully offline classification).
 
 ### Unified Inbox (Unibox)
-A built-in inbox sync layer gives you real-time reply detection, threaded conversation view, and compose/reply — all inside Quickly. Works across your Gmail and Microsoft accounts side-by-side. No tab-switching. No missed replies.
+A built-in inbox sync layer gives you real-time reply detection, threaded conversation view, and compose/reply — all inside Outreach. Works across your Gmail and Microsoft accounts side-by-side. No tab-switching. No missed replies.
 
 ### Open & Click Tracking with Custom Domains
-Built-in pixel tracking and link wrapping capture every open and click. **Quickly Beacon** is the recommended way to use your own tracking hostname on prebuilt Docker / Railway-style deployments. Advanced self-hosters can still point a CNAME at Quickly when **host Caddy** or in-compose Caddy handles on-demand TLS (see [INSTALL.md](INSTALL.md#quickly-beacon-recommended-custom-tracking-hostnames)). Filter out your own opens and clicks by registering known IPs.
+Built-in pixel tracking and link wrapping capture every open and click. **Outreach Beacon** is the recommended way to use your own tracking hostname on prebuilt Docker / Railway-style deployments. Advanced self-hosters can still point a CNAME at Outreach when **host Caddy** or in-compose Caddy handles on-demand TLS (see [INSTALL.md](INSTALL.md#outreach-beacon-recommended-custom-tracking-hostnames)). Filter out your own opens and clicks by registering known IPs.
 
 ### Full Analytics Dashboard
 See aggregated metrics, per-campaign breakdowns, per-step performance, timeline charts, open rates, click rates, reply rates, bounces, and unsubscribes — all in one view.
 
 ### Lead Provider Matching
-Quickly detects each lead's email provider via DNS MX lookup (Google Workspace, Office 365, etc.) and can automatically route sends through matching inboxes. Google leads get Gmail senders; Microsoft leads get Office 365 senders. Toggle per campaign with zero configuration.
+Outreach detects each lead's email provider via DNS MX lookup (Google Workspace, Office 365, etc.) and can automatically route sends through matching inboxes. Google leads get Gmail senders; Microsoft leads get Office 365 senders. Toggle per campaign with zero configuration.
 
 ### System Health Dashboard
 A dedicated **System Health** page gives you a live overview of every connected inbox's token status, OAuth scope coverage, tracking domain reachability, AI feature connectivity, and unibox sync mode — all in one place. No digging through logs.
@@ -79,7 +79,7 @@ Register any number of webhook endpoints and subscribe them to any combination o
 
 `email.sent` · `email.opened` · `email.clicked` · `email.bounced` · `lead.replied` · `lead.unsubscribed` · `lead.status_changed` · `lead.interested` · `lead.not_interested` · `lead.out_of_office` · `lead.wrong_person` · `lead.auto_reply` · `daily_limit` · `rate_limit` · `token_expired`
 
-Each webhook supports Bearer token authentication and per-endpoint event filtering. Connect Quickly to your CRM, Slack, Zapier, or any custom pipeline.
+Each webhook supports Bearer token authentication and per-endpoint event filtering. Connect Outreach to your CRM, Slack, Zapier, or any custom pipeline.
 
 ### Email Verification
 Verify lead addresses before sending via mailtester.ninja or any custom HTTP provider. Trigger verification per campaign with live status tracking — stop wasting sends on bad addresses.
@@ -88,14 +88,14 @@ Verify lead addresses before sending via mailtester.ninja or any custom HTTP pro
 Drag campaigns to reorder send priority. Choose **priority-first** (exhaust the top campaign's slots first) or **round-robin** (spread sends evenly). Set a timezone per campaign so emails land during your recipients' business hours, not yours.
 
 ### CSV Import / Export, Full REST API & n8n Integration
-Bulk-import leads from CSV in seconds. Export any campaign's leads with full open/click/reply status at any time. Automate everything with 90+ REST API endpoints secured by JWT auth and API keys — every UI action has an API equivalent. For workflow automation, Quickly ships with a **custom n8n node** so you can build pipelines in n8n without hand-coding HTTP for every call — see **[Automating with n8n](#automating-with-n8n)** and the dedicated **[N8N.md](N8N.md)** guide.
+Bulk-import leads from CSV in seconds. Export any campaign's leads with full open/click/reply status at any time. Automate everything with 90+ REST API endpoints secured by JWT auth and API keys — every UI action has an API equivalent. For workflow automation, Outreach ships with a **custom n8n node** so you can build pipelines in n8n without hand-coding HTTP for every call — see **[Automating with n8n](#automating-with-n8n)** and the dedicated **[N8N.md](N8N.md)** guide.
 
 ### Onboarding & Deliverability Tips
 A guided onboarding checklist walks new users through connecting inboxes, building their first campaign, and configuring tracking. A dedicated **Deliverability Tips** page covers DNS setup, warm-up best practices, and sending guidelines to maximize inbox placement.
 
 ---
 
-## How Quickly Works
+## How Outreach Works
 
 ```
 ┌────────────┐      ┌──────────────┐     ┌─────────────┐
@@ -124,17 +124,17 @@ A guided onboarding checklist walks new users through connecting inboxes, buildi
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app)
 
-Click the button above to spin up Quickly on [Railway](https://railway.com) in seconds — no VPS, no DevOps, completely free to start. Railway handles the infrastructure; you just configure your OAuth credentials and go.
+Click the button above to spin up Outreach on [Railway](https://railway.com) in seconds — no VPS, no DevOps, completely free to start. Railway handles the infrastructure; you just configure your OAuth credentials and go.
 
 **Option 2: Self-host with Docker (any VPS or PaaS)**
 
-If you plan to use **only [Quickly Beacon](INSTALL.md#quickly-beacon-recommended-custom-tracking-hostnames)** for custom tracking (recommended on the prebuilt image), use **`docker-compose.no-caddy.yml`** — Postgres + Quickly on port **8000**, no Caddy in Compose; put your own reverse proxy in front for HTTPS. See [INSTALL.md — Beacon-only](INSTALL.md#beacon-only-docker-compose-no-caddy).
+If you plan to use **only [Outreach Beacon](INSTALL.md#outreach-beacon-recommended-custom-tracking-hostnames)** for custom tracking (recommended on the prebuilt image), use **`docker-compose.no-caddy.yml`** — Postgres + Outreach on port **8000**, no Caddy in Compose; put your own reverse proxy in front for HTTPS. See [INSTALL.md — Beacon-only](INSTALL.md#beacon-only-docker-compose-no-caddy).
 
 ```bash
 mkdir quickly && cd quickly
 
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose.no-caddy.yml
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose.no-caddy.yml
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
 mv .env.example .env
 # Set BASE_URL and your OAuth credentials; terminate HTTPS with nginx, Traefik, host Caddy, etc.
 
@@ -146,9 +146,9 @@ docker compose -f docker-compose.no-caddy.yml up -d
 ```bash
 mkdir quickly && cd quickly
 
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose.yml
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/Caddyfile
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose.yml
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/Caddyfile
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
 
 mv .env.example .env
 # Set CADDY_HOST, BASE_URL, and your OAuth credentials in .env
@@ -158,7 +158,7 @@ docker compose up -d
 
 **That's it** for the Caddy stack — open `https://yourdomain.com` and Caddy provisions HTTPS automatically.
 
-Quickly is optimized to run on any Docker-compatible platform: Railway, Render, Fly.io, a bare VPS, or your own machine. There's no mandatory infrastructure cost.
+Outreach is optimized to run on any Docker-compatible platform: Railway, Render, Fly.io, a bare VPS, or your own machine. There's no mandatory infrastructure cost.
 
 > Need a step-by-step walkthrough? [INSTALL.md](INSTALL.md) is an interactive guide — pick your deployment path (Railway, fresh VPS, nginx, or local dev) and it walks you through every step.
 
@@ -166,29 +166,29 @@ Quickly is optimized to run on any Docker-compatible platform: Railway, Render, 
 
 ## Frequently Asked Questions
 
-**Is Quickly really free?**
-Yes. Quickly is MIT-licensed open-source software with no per-contact fees, no seat limits, and no feature tiers. You can run it completely free on platforms like Railway — no server costs at all. If you prefer full control, deploying to your own VPS typically costs $5–$20/month.
+**Is Outreach really free?**
+Yes. Outreach is MIT-licensed open-source software with no per-contact fees, no seat limits, and no feature tiers. You can run it completely free on platforms like Railway — no server costs at all. If you prefer full control, deploying to your own VPS typically costs $5–$20/month.
 
-**What email providers does Quickly support?**
-Quickly supports **Gmail** (via Google OAuth), **Microsoft accounts** — including personal Outlook.com addresses and business Microsoft 365 / Office 365 accounts (via Microsoft Graph API OAuth2) — and **any SMTP relay** (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. You can mix all inbox types in the same campaign.
+**What email providers does Outreach support?**
+Outreach supports **Gmail** (via Google OAuth), **Microsoft accounts** — including personal Outlook.com addresses and business Microsoft 365 / Office 365 accounts (via Microsoft Graph API OAuth2) — and **any SMTP relay** (Amazon SES, Brevo, self-hosted, …) with optional IMAP reply sync. You can mix all inbox types in the same campaign.
 
-**How is Quickly different from Instantly or Smartlead?**
-Instantly and Smartlead are hosted SaaS products that store your data on their servers and charge monthly fees per inbox or contact. Quickly runs entirely on your infrastructure — your leads never leave your server.
+**How is Outreach different from Instantly or Smartlead?**
+Instantly and Smartlead are hosted SaaS products that store your data on their servers and charge monthly fees per inbox or contact. Outreach runs entirely on your infrastructure — your leads never leave your server.
 
-**Does Quickly support AI reply classification?**
-Yes. Quickly integrates with 19 AI providers (OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, and more) to automatically classify replies into categories like `interested`, `not_interested`, and `out_of_office`.
+**Does Outreach support AI reply classification?**
+Yes. Outreach integrates with 19 AI providers (OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, and more) to automatically classify replies into categories like `interested`, `not_interested`, and `out_of_office`.
 
-**Can I use Quickly with a team?**
+**Can I use Outreach with a team?**
 Yes. There are no seat limits. Deploy once, give your entire team access.
 
 **Is there an API? Can I use it with n8n?**
-Yes — 90+ REST endpoints covering every feature in the UI, all secured via JWT and API keys. Quickly also ships with a **custom n8n node** for drag-and-drop workflows. Start with [N8N.md](N8N.md) (overview and link to the full package README); HTTP details are in [API.md](API.md).
+Yes — 90+ REST endpoints covering every feature in the UI, all secured via JWT and API keys. Outreach also ships with a **custom n8n node** for drag-and-drop workflows. Start with [N8N.md](N8N.md) (overview and link to the full package README); HTTP details are in [API.md](API.md).
 
 **How does authentication work?**
-Quickly has a built-in user system. On first run, visit the login page and register your admin account. Log in with username/password, or with Google/Microsoft OAuth. For automation, generate API keys from the Settings page.
+Outreach has a built-in user system. On first run, visit the login page and register your admin account. Log in with username/password, or with Google/Microsoft OAuth. For automation, generate API keys from the Settings page.
 
 **What happens when someone unsubscribes?**
-Quickly automatically catches unsubscribe replies via AI classification and marks those leads so they never receive another email.
+Outreach automatically catches unsubscribe replies via AI classification and marks those leads so they never receive another email.
 
 ---
 
@@ -259,7 +259,7 @@ The `.env` file is intentionally minimal. All runtime settings (test mode, time 
 | [INSTALL.md](INSTALL.md) | **Interactive installation guide** — choose Railway, fresh VPS, nginx, or local dev, then follow step-by-step through Gmail / Office 365 / SMTP setup and first campaign |
 | [INSTALL.md — Step 3B](INSTALL.md#step-3b-connect-office-365--outlook-inboxes) | Azure portal walkthrough for connecting Office 365 / Outlook inboxes |
 | [API.md](API.md) | Complete REST API reference — all endpoints including auth, system health, provider matching, notifications |
-| [N8N.md](N8N.md) | **n8n automation** — custom Quickly node, credentials, pointers to install and [full package README](../n8n-node/README.md) |
+| [N8N.md](N8N.md) | **n8n automation** — custom Outreach node, credentials, pointers to install and [full package README](../n8n-node/README.md) |
 | [WEBHOOKS.md](WEBHOOKS.md) | All 15 event types, payload schemas, auth setup |
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | How to contribute, dev environment setup |
 
@@ -292,15 +292,15 @@ curl http://localhost:8000/api/status \
 
 ## Automating with n8n
 
-Self-hosted Quickly pairs naturally with **self-hosted n8n**: the same API keys and base URL you use for scripts work in workflows. Quickly ships a **community node package** (`n8n-nodes-quickly`) that maps the REST API into a single **Quickly** node—choose a **resource** (Campaign, Lead, Inbox, Webhook, Unibox, …) and an **operation**, then fill the fields n8n shows for that pair. Credentials are stored once (**Quickly API**: base URL + API key or Bearer token), and the connection test hits `GET /api/auth/me` so you know n8n can reach your instance before you run a workflow.
+Self-hosted Outreach pairs naturally with **self-hosted n8n**: the same API keys and base URL you use for scripts work in workflows. Outreach ships a **community node package** (`n8n-nodes-quickly`) that maps the REST API into a single **Outreach** node—choose a **resource** (Campaign, Lead, Inbox, Webhook, Unibox, …) and an **operation**, then fill the fields n8n shows for that pair. Credentials are stored once (**Outreach API**: base URL + API key or Bearer token), and the connection test hits `GET /api/auth/me` so you know n8n can reach your instance before you run a workflow.
 
-You still use **[API.md](API.md)** whenever you need exact request shapes, query parameters, or response fields; the node is a typed UI on top of those routes. Outbound **webhooks** from Quickly into n8n (or anything else) are documented in **[WEBHOOKS.md](WEBHOOKS.md)**.
+You still use **[API.md](API.md)** whenever you need exact request shapes, query parameters, or response fields; the node is a typed UI on top of those routes. Outbound **webhooks** from Outreach into n8n (or anything else) are documented in **[WEBHOOKS.md](WEBHOOKS.md)**.
 
-**Common patterns** people build with the Quickly n8n node:
+**Common patterns** people build with the Outreach n8n node:
 
 - Sync interested leads into a CRM (HubSpot, Pipedrive, Notion)
 - Slack or Telegram alerts when a lead is classified as `interested`
-- Chain **Webhook** triggers from Quickly into enrichment, then **Campaign Lead → Add** to enroll new contacts
+- Chain **Webhook** triggers from Outreach into enrichment, then **Campaign Lead → Add** to enroll new contacts
 - Scheduled pulls of campaign analytics into Sheets or a data warehouse
 - Form → n8n → **Lead** / **Campaign Lead** flows without maintaining raw `curl` in Code nodes
 
@@ -310,9 +310,9 @@ You still use **[API.md](API.md)** whenever you need exact request shapes, query
 
 
 
-Quickly is actively developed and contributions are welcome. If you've found a bug, have a feature request, or want to submit a PR, see [CONTRIBUTORS.md](CONTRIBUTORS.md) for guidelines.
+Outreach is actively developed and contributions are welcome. If you've found a bug, have a feature request, or want to submit a PR, see [CONTRIBUTORS.md](CONTRIBUTORS.md) for guidelines.
 
-If Quickly is saving you money or replacing a paid tool in your stack, **please consider dropping a ⭐ — it helps others find the project.**
+If Outreach is saving you money or replacing a paid tool in your stack, **please consider dropping a ⭐ — it helps others find the project.**
 
 ---
 
@@ -324,5 +324,5 @@ If Quickly is saving you money or replacing a paid tool in your stack, **please 
 
 <p align="center">
   <strong>Stop paying per contact. Own your cold email stack.</strong><br/>
-  <a href="#quick-start">Deploy Quickly in 5 minutes →</a>
+  <a href="#quick-start">Deploy Outreach in 5 minutes →</a>
 </p>

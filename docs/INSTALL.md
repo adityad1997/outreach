@@ -1,4 +1,4 @@
-# Quickly — Installation Guide
+# Outreach — Installation Guide
 
 > **How to use this guide:** Start at [Step 1](#step-1-choose-your-deployment-path) and follow the path that matches your situation. Every path leads back to the shared steps at the end.
 
@@ -19,9 +19,9 @@
 - [Step 3C: Connect Amazon SES (via SMTP)](#step-3c-connect-amazon-ses-via-smtp)
 - [Step 4: Create Your First Campaign](#step-4-create-your-first-campaign)
 - [Optional: AI Reply Classification](#optional-ai-reply-classification)
-- [Quickly Beacon (recommended custom tracking hostnames)](#quickly-beacon-recommended-custom-tracking-hostnames)
-- [Optional: Advanced — CNAME custom domains to Quickly](#optional-advanced--cname-custom-domains-to-quickly)
-- [Updating Quickly](#updating-quickly)
+- [Outreach Beacon (recommended custom tracking hostnames)](#outreach-beacon-recommended-custom-tracking-hostnames)
+- [Optional: Advanced — CNAME custom domains to Outreach](#optional-advanced--cname-custom-domains-to-outreach)
+- [Updating Outreach](#updating-outreach)
 - [Environment Variables Reference](#environment-variables-reference)
 - [Troubleshooting](#troubleshooting)
 
@@ -36,7 +36,7 @@
 |[**C — Existing server with nginx**](#option-c-existing-server-with-nginx)|You already have other sites on the same server|⭐⭐⭐ Medium|
 |[**D — Local development**](#option-d-local-development)|Contributing, testing, or hacking on the code|⭐⭐ Easy|
 
-**Custom tracking links on your own domain:** use [**Quickly Beacon**](#quickly-beacon-recommended-custom-tracking-hostnames) (recommended for the prebuilt image and Railway). The inbox UI hides the legacy “CNAME to Quickly” flow on those deployments; advanced single-VPS setups with **host Caddy** can still use [CNAME + on-demand TLS](#optional-advanced--cname-custom-domains-to-quickly) if you know the moving parts.
+**Custom tracking links on your own domain:** use [**Outreach Beacon**](#outreach-beacon-recommended-custom-tracking-hostnames) (recommended for the prebuilt image and Railway). The inbox UI hides the legacy “CNAME to Outreach” flow on those deployments; advanced single-VPS setups with **host Caddy** can still use [CNAME + on-demand TLS](#optional-advanced--cname-custom-domains-to-outreach) if you know the moving parts.
 
 ---
 
@@ -64,7 +64,7 @@ In Railway: **New Project → Deploy a Docker image**
 
 In your Railway project, click **+ New → Database → Add PostgreSQL**.
 
-Railway automatically injects `DATABASE_URL` as an environment variable — Quickly picks this up with no extra configuration.
+Railway automatically injects `DATABASE_URL` as an environment variable — Outreach picks this up with no extra configuration.
 
 **3. Set your environment variables.**
 
@@ -97,7 +97,7 @@ Railway deploys automatically when you save variables. The Docker image pull tak
 
 In the Railway dashboard, go to **Settings → Domains** and copy the generated URL (e.g. `https://quickly-production.up.railway.app`). If this differs from the `BASE_URL` you set above, update `BASE_URL` to match exactly, then redeploy.
 
-**6. Custom tracking hostname (optional).** The prebuilt image is meant to use [**Quickly Beacon**](#quickly-beacon-recommended-custom-tracking-hostnames) on a separate URL for `track.yourbrand.com`–style links. Run Beacon there, paste its setup URL under **Inboxes → Connect Beacon**. You do not CNAME a tracking host directly to Railway’s Quickly service for that workflow.
+**6. Custom tracking hostname (optional).** The prebuilt image is meant to use [**Outreach Beacon**](#outreach-beacon-recommended-custom-tracking-hostnames) on a separate URL for `track.yourbrand.com`–style links. Run Beacon there, paste its setup URL under **Inboxes → Connect Beacon**. You do not CNAME a tracking host directly to Railway’s Outreach service for that workflow.
 
 ---
 
@@ -113,9 +113,9 @@ In the Railway dashboard, go to **Settings → Domains** and copy the generated 
 
 | File | When to use |
 |---|---|
-| **`docker-compose.no-caddy.yml`** | **Recommended** if you plan to use **only [Quickly Beacon](#quickly-beacon-recommended-custom-tracking-hostnames)** for custom tracking hostnames (the usual path for the prebuilt image). Runs **Postgres + Quickly** on port **8000** with **no Caddy** in the stack — terminate HTTPS with nginx, Traefik, **host Caddy**, a cloud load balancer, or another reverse proxy in front. Creates its own Postgres volume automatically; no `docker volume create` step. |
-| **`docker-compose.yml`** | You want **Caddy inside Docker** to obtain and renew Let's Encrypt certificates for your main Quickly domain (single stack, minimal moving parts). |
-| **`docker-compose-not-host.yml`** | You already run **Caddy on the host** and may need the **legacy CNAME-to-Quickly** tracking flow with on-demand TLS — see [Already running Caddy on the host](#already-running-caddy-on-the-host-not-host). Not required for Beacon-only setups. |
+| **`docker-compose.no-caddy.yml`** | **Recommended** if you plan to use **only [Outreach Beacon](#outreach-beacon-recommended-custom-tracking-hostnames)** for custom tracking hostnames (the usual path for the prebuilt image). Runs **Postgres + Outreach** on port **8000** with **no Caddy** in the stack — terminate HTTPS with nginx, Traefik, **host Caddy**, a cloud load balancer, or another reverse proxy in front. Creates its own Postgres volume automatically; no `docker volume create` step. |
+| **`docker-compose.yml`** | You want **Caddy inside Docker** to obtain and renew Let's Encrypt certificates for your main Outreach domain (single stack, minimal moving parts). |
+| **`docker-compose-not-host.yml`** | You already run **Caddy on the host** and may need the **legacy CNAME-to-Outreach** tracking flow with on-demand TLS — see [Already running Caddy on the host](#already-running-caddy-on-the-host-not-host). Not required for Beacon-only setups. |
 
 ---
 
@@ -127,8 +127,8 @@ In the Railway dashboard, go to **Settings → Domains** and copy the generated 
 
 - A Linux VPS (or any host) with [Docker Engine](https://docs.docker.com/engine/install/) and the Docker Compose plugin  
   Quick install: `curl -fsSL https://get.docker.com | sh`
-- A way to expose the app over **HTTPS** in production (reverse proxy, tunnel, or TLS at the edge) — Compose publishes Quickly on **8000** by default
-- A domain is typical: point DNS at your proxy, which forwards to Quickly on the host (e.g. `127.0.0.1:8000`)
+- A way to expose the app over **HTTPS** in production (reverse proxy, tunnel, or TLS at the edge) — Compose publishes Outreach on **8000** by default
+- A domain is typical: point DNS at your proxy, which forwards to Outreach on the host (e.g. `127.0.0.1:8000`)
 
 **Steps**
 
@@ -141,8 +141,8 @@ mkdir quickly && cd quickly
 **2. Download Compose and env template.**
 
 ```bash
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose.no-caddy.yml
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose.no-caddy.yml
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
 mv .env.example .env
 ```
 
@@ -150,7 +150,7 @@ mv .env.example .env
 
 > `DATABASE_URL` is set in `docker-compose.no-caddy.yml` for the bundled PostgreSQL service.
 
-**4. Start Quickly.**
+**4. Start Outreach.**
 
 ```bash
 docker compose -f docker-compose.no-caddy.yml up -d
@@ -158,15 +158,15 @@ docker compose -f docker-compose.no-caddy.yml up -d
 
 **5. Point your reverse proxy** at `127.0.0.1:8000` (or change the published port in the file if you prefer). Reload the proxy.
 
-**6. Custom tracking:** run [Quickly Beacon](#quickly-beacon-recommended-custom-tracking-hostnames) on its own origin and connect it under **Inboxes → Connect Beacon**.
+**6. Custom tracking:** run [Outreach Beacon](#outreach-beacon-recommended-custom-tracking-hostnames) on its own origin and connect it under **Inboxes → Connect Beacon**.
 
 > **Next step (Beacon-only path):** [Step 2: First Login & User Setup](#step-2-first-login--user-setup). Skip the all-in-one Caddy section below if this file is what you deployed.
 
 ---
 
-### All-in-one: Postgres + Quickly + Caddy (`docker-compose.yml`)
+### All-in-one: Postgres + Outreach + Caddy (`docker-compose.yml`)
 
-> **Best for:** One Compose stack where **Caddy** obtains and renews HTTPS certificates (Let's Encrypt) for your main Quickly domain — no Certbot.
+> **Best for:** One Compose stack where **Caddy** obtains and renews HTTPS certificates (Let's Encrypt) for your main Outreach domain — no Certbot.
 
 ### What you'll need
 
@@ -199,9 +199,9 @@ If this volume does not exist yet, `docker compose up` will fail — the file ex
 ```bash
 mkdir quickly && cd quickly
 
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose.yml
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/Caddyfile
-curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose.yml
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/Caddyfile
+curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
 mv .env.example .env
 ```
 
@@ -266,7 +266,7 @@ If you're on a cloud provider, also open these ports in your cloud dashboard:
 docker compose up -d
 ```
 
-On first start, Caddy contacts Let's Encrypt and obtains a TLS certificate for your domain (takes a few seconds). Visit `https://yourdomain.com` — Quickly is live.
+On first start, Caddy contacts Let's Encrypt and obtains a TLS certificate for your domain (takes a few seconds). Visit `https://yourdomain.com` — Outreach is live.
 
 Certificates are stored in the `caddy_data` Docker volume and **renew automatically**. You never need to manage them again.
 
@@ -283,13 +283,13 @@ Choose this if **Caddy is already on your VPS** for other sites and you **do not
 
 > **Planning to use only Beacon for tracking?** Use **`docker-compose.no-caddy.yml`** instead ([Beacon-only path](#beacon-only-docker-compose-no-caddy)) — that is the **recommended** Compose layout; you do not need this not-host file unless you want **host Caddy** plus the legacy flow below.
 
-> **Not the default path for tracking.** Prefer [**Quickly Beacon**](#quickly-beacon-recommended-custom-tracking-hostnames) for custom tracking domains so Quickly and TLS stay simple. Use **this** not-host layout only if you intentionally run **one** Quickly stack behind **host** Caddy (see `docker-compose-not-host.yml` and the sample `Caddyfile.host` in the repo) and you understand on-demand TLS and DNS — for example **legacy CNAME-to-Quickly** tracking. The Compose file sets `QUICKLY_PREBUILT_IMAGE=0` so the legacy **CNAME to Quickly** controls stay available in the inbox UI.
+> **Not the default path for tracking.** Prefer [**Outreach Beacon**](#outreach-beacon-recommended-custom-tracking-hostnames) for custom tracking domains so Outreach and TLS stay simple. Use **this** not-host layout only if you intentionally run **one** Outreach stack behind **host** Caddy (see `docker-compose-not-host.yml` and the sample `Caddyfile.host` in the repo) and you understand on-demand TLS and DNS — for example **legacy CNAME-to-Outreach** tracking. The Compose file sets `QUICKLY_PREBUILT_IMAGE=0` so the legacy **CNAME to Outreach** controls stay available in the inbox UI.
 
 **Compared to the Compose + Caddy layout above**
 
 | | Compose + Caddy (`docker-compose.yml`) | Not-host (`docker-compose-not-host.yml`) |
 |---|---|---|
-| Caddy | Runs **inside** Docker with Quickly | Only your **existing host Caddy** |
+| Caddy | Runs **inside** Docker with Outreach | Only your **existing host Caddy** |
 | What you download | `docker-compose.yml` + `Caddyfile` | `docker-compose-not-host.yml` (no Caddyfile for Docker) |
 | HTTPS | The Compose Caddy gets certificates | Your **host** Caddy keeps handling TLS as it does today |
 
@@ -301,24 +301,24 @@ Choose this if **Caddy is already on your VPS** for other sites and you **do not
    docker volume create quickly_pgdata
    ```
 
-2. Download **`docker-compose-not-host.yml`** from the [releases page](https://github.com/AbdelftahZowail/Quickly/releases/latest) (bundled beside `docker-compose.yml`), plus **`.env.example`**:
+2. Download **`docker-compose-not-host.yml`** from the [releases page](https://github.com/adityad1997/quickly/releases/latest) (bundled beside `docker-compose.yml`), plus **`.env.example`**:
 
    ```bash
    mkdir quickly && cd quickly
-   curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/docker-compose-not-host.yml
-   curl -LO https://github.com/AbdelftahZowail/Quickly/releases/latest/download/.env.example
+   curl -LO https://github.com/adityad1997/quickly/releases/latest/download/docker-compose-not-host.yml
+   curl -LO https://github.com/adityad1997/quickly/releases/latest/download/.env.example
    mv .env.example .env
    ```
 
 3. Edit **`.env`**: set **`BASE_URL`**, **`QUICKLY_SECRET_KEY`**, and your OAuth variables — same as in the **Compose + Caddy** steps above. You can leave **`CADDY_HOST`** empty; this stack does not run the project’s Caddy container.
 
-4. Start Quickly:
+4. Start Outreach:
 
    ```bash
    docker compose -f docker-compose-not-host.yml up -d
    ```
 
-5. Tell **host Caddy** to proxy to Quickly. The not-host compose publishes Quickly on **`127.0.0.1:5050`** (and also on `8000`). Add a site block like this to **`/etc/caddy/Caddyfile`** (use your real domain):
+5. Tell **host Caddy** to proxy to Outreach. The not-host compose publishes Outreach on **`127.0.0.1:5050`** (and also on `8000`). Add a site block like this to **`/etc/caddy/Caddyfile`** (use your real domain):
 
    ```caddy
    quickly.example.com {
@@ -340,7 +340,7 @@ Choose this if **Caddy is already on your VPS** for other sites and you **do not
 
 > **Best for:** You already have nginx running on this server and don't want to disrupt your current setup.
 
-The recommended approach is to migrate from nginx to Caddy. This gives you automatic HTTPS for all your existing sites _and_ enables Quickly's custom tracking domain feature.
+The recommended approach is to migrate from nginx to Caddy. This gives you automatic HTTPS for all your existing sites _and_ enables Outreach's custom tracking domain feature.
 
 ### Steps
 
@@ -393,7 +393,7 @@ Since the host Caddy now handles everything, remove the Caddy Docker service:
 - Remove the `caddy:` service block and its volumes from `docker-compose.yml`
 - Change `expose: ["8000"]` on the `app` service to `ports: ["127.0.0.1:8000:8000"]`
 
-**5. Add Quickly to your host Caddyfile.**
+**5. Add Outreach to your host Caddyfile.**
 
 Edit `/etc/caddy/Caddyfile` and add:
 
@@ -418,7 +418,7 @@ docker compose up -d
 
 ## Option D: Local Development
 
-> **Best for:** Contributing to Quickly, testing features, or running it on your own machine.
+> **Best for:** Contributing to Outreach, testing features, or running it on your own machine.
 
 ### Prerequisites
 
@@ -435,7 +435,7 @@ docker compose up -d
 The fastest way to run everything locally with hot-reload:
 
 ```bash
-git clone https://github.com/AbdelftahZowail/Quickly.git
+git clone https://github.com/adityad1997/quickly.git
 cd quickly
 cp .env.example .env
 # Edit .env and set: BASE_URL=http://localhost:8000
@@ -453,7 +453,7 @@ Open `http://localhost:5173` — the frontend hot-reloads on changes; the backen
 **1. Clone the repo and set up Python.**
 
 ```bash
-git clone https://github.com/AbdelftahZowail/Quickly.git
+git clone https://github.com/adityad1997/quickly.git
 cd quickly
 
 python -m venv .venv
@@ -529,7 +529,7 @@ pytest
 
 ## Step 2: First Login & User Setup
 
-**1. Open your Quickly URL in a browser.**
+**1. Open your Outreach URL in a browser.**
 
 **2. Create your admin account.**
 
@@ -562,13 +562,13 @@ For programmatic access (n8n, scripts, custom integrations), generate API keys f
 
 ## Step 3A: Connect Gmail Inboxes
 
-> You can connect as many Gmail accounts as you want. Each becomes a sending inbox that Quickly rotates emails across.
+> You can connect as many Gmail accounts as you want. Each becomes a sending inbox that Outreach rotates emails across.
 
 ### 1. Create a Google Cloud Project
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click the project selector → **New Project**
-3. Give it a name (e.g. "Quickly Email") and click **Create**
+3. Give it a name (e.g. "Outreach Email") and click **Create**
 
 ### 2. Enable Required APIs
 
@@ -616,7 +616,7 @@ docker compose up -d
 
 Skip this if you're happy with scheduled polling for reply detection.
 
-1. In Quickly, go to **Settings → Gmail Sync** and copy the **Push Webhook Token** (and note the exact push URL the page shows — it already includes the token).
+1. In Outreach, go to **Settings → Gmail Sync** and copy the **Push Webhook Token** (and note the exact push URL the page shows — it already includes the token).
 2. Go to **Pub/Sub → Topics → Create Topic**
 3. Topic ID: `quickly-gmail-push` (or any name you prefer)
 4. Create a **Push subscription** on the topic pointing to: `https://yourdomain.com/api/unibox/gmail/push?token=<Push Webhook Token from Settings → Gmail Sync>`
@@ -629,9 +629,9 @@ Skip this if you're happy with scheduled polling for reply detection.
 
 > **This is the most involved step in the whole guide.** IAM roles, push subscriptions, and topic naming are easy to get wrong. If you're hitting errors, search "Google Cloud Pub/Sub push subscription setup" or ask an AI chatbot to walk you through it — describe that you need a push subscription that forwards to a webhook URL, with the Gmail push service account as publisher.
 
-### 7. Connect Gmail Accounts in Quickly
+### 7. Connect Gmail Accounts in Outreach
 
-1. In Quickly, go to **Inboxes → Add Inbox → Connect Gmail Account**
+1. In Outreach, go to **Inboxes → Add Inbox → Connect Gmail Account**
 2. Complete the Google OAuth flow
 3. The inbox appears automatically and is ready to use
 
@@ -645,7 +645,7 @@ Repeat for as many Gmail accounts as you want.
 
 ## Step 3B: Connect Office 365 / Outlook Inboxes
 
-> Quickly supports Microsoft 365, Office 365, and personal Outlook.com accounts. Gmail and Microsoft inboxes can be mixed freely in the same campaign.
+> Outreach supports Microsoft 365, Office 365, and personal Outlook.com accounts. Gmail and Microsoft inboxes can be mixed freely in the same campaign.
 
 > **The Azure portal can be overwhelming.** If you've never registered an app there before, the navigation is dense and the permission/consent flow is easy to get wrong. If you get stuck at any point below, search "Azure app registration OAuth web app" or ask an AI chatbot to guide you through registering an app in Azure AD with delegated Microsoft Graph permissions — it's a very common setup and well-documented.
 
@@ -698,7 +698,7 @@ Then restart your containers:
 docker compose up -d
 ```
 
-**7. Connect accounts in Quickly.**
+**7. Connect accounts in Outreach.**
 
 Go to **Inboxes → Add Inbox → Connect Office 365 Account** and complete the OAuth flow.
 
@@ -706,7 +706,7 @@ Go to **Inboxes → Add Inbox → Connect Office 365 Account** and complete the 
 
 ## Step 3C: Connect Amazon SES (via SMTP)
 
-> Amazon SES (Simple Email Service) works with Quickly's generic **SMTP provider** — no extra integration code is needed. You use SES's SMTP interface, so Quickly treats it like any other SMTP relay.
+> Amazon SES (Simple Email Service) works with Outreach's generic **SMTP provider** — no extra integration code is needed. You use SES's SMTP interface, so Outreach treats it like any other SMTP relay.
 
 ### 1. Get SES SMTP credentials
 
@@ -718,11 +718,11 @@ Go to **Inboxes → Add Inbox → Connect Office 365 Account** and complete the 
 
 ### 2. Verify your sending identity
 
-In **SES → Verified identities**, verify the domain or email address you will send from. Quickly's inbox email must match a verified identity, otherwise SES rejects every send.
+In **SES → Verified identities**, verify the domain or email address you will send from. Outreach's inbox email must match a verified identity, otherwise SES rejects every send.
 
 > **Sandbox warning:** new SES accounts start in the **sandbox**: you can only send *to* verified addresses and throughput is capped. Request **production access** (SES → Account dashboard) before running real campaigns.
 
-### 3. Add the inbox in Quickly
+### 3. Add the inbox in Outreach
 
 Go to **Inboxes → Add Inbox → SMTP (any provider)** and fill in:
 
@@ -734,16 +734,16 @@ Go to **Inboxes → Add Inbox → SMTP (any provider)** and fill in:
 | SMTP username / password | The SMTP credentials from step 1 |
 | IMAP | Leave empty — SES is send-only (see below) |
 
-Quickly tests the connection automatically after creation.
+Outreach tests the connection automatically after creation.
 
 ### Notes and limits
 
 - **Replies:** SES has no mailbox, so there is nothing for IMAP reply-sync to connect to. SES inboxes are **send-only**: replies won't appear in the Unibox unless you route them elsewhere (e.g. set SES to forward replies to a Gmail/IMAP mailbox you also connect).
-- **Bounces:** Quickly classifies permanent failures as **recipient** (invalid address / user unknown) vs **sender** (auth, policy, reputation). Recipient hard bounces mark the lead bounced across all campaigns and emit `email.bounced`. Sender failures do not mark the lead bounced; high sender rates can auto-pause the inbox. Campaign list shows Bounced % and Sender Bounced %; each inbox shows Sending Health over the last 14 days. Auto-pause defaults: **5%** after **≥200** send attempts (editable under Settings → Bounce auto-pause). Soft warning in the campaign list at **≥2%** recipient bounce.
-- **Ambiguous permanent failures (2B):** when a 5xx/API reject cannot be classified, Quickly currently treats it as a **recipient bounce** immediately. That can **inflate bounce rate** if policy/content rejects are mis-read as unknown. If campaign bounce % rises sharply after an upgrade, reconsider classifying `unknown_permanent` as record-only until confirmed (option **2A** — promote on repeat). Prefer expanding policy phrase rules so true sender rejects hit sender-policy instead of falling through.
+- **Bounces:** Outreach classifies permanent failures as **recipient** (invalid address / user unknown) vs **sender** (auth, policy, reputation). Recipient hard bounces mark the lead bounced across all campaigns and emit `email.bounced`. Sender failures do not mark the lead bounced; high sender rates can auto-pause the inbox. Campaign list shows Bounced % and Sender Bounced %; each inbox shows Sending Health over the last 14 days. Auto-pause defaults: **5%** after **≥200** send attempts (editable under Settings → Bounce auto-pause). Soft warning in the campaign list at **≥2%** recipient bounce.
+- **Ambiguous permanent failures (2B):** when a 5xx/API reject cannot be classified, Outreach currently treats it as a **recipient bounce** immediately. That can **inflate bounce rate** if policy/content rejects are mis-read as unknown. If campaign bounce % rises sharply after an upgrade, reconsider classifying `unknown_permanent` as record-only until confirmed (option **2A** — promote on repeat). Prefer expanding policy phrase rules so true sender rejects hit sender-policy instead of falling through.
 - **Delayed bounces:** Delay DSNs (`Action: delayed`, subject “(Delay)”) are ignored. Delayed permanent NDRs via SNS are not integrated for SES — if you need those, configure SES to forward bounce mail to a monitored mailbox.
-- **Limits:** SES enforces per-region daily quotas and send rates. Mirror them in the inbox's **Max emails per day** and **Wait between emails** so Quickly never outruns your SES limits.
-- **Broken credentials auto-pause:** if the relay rejects authentication (e.g. `535 Authentication failed`), Quickly **pauses the inbox** and fires a `token_expired` notification (with `provider: "smtp"`) instead of retrying forever. Fix the credentials, then resume the inbox from **Inboxes → Resume**.
+- **Limits:** SES enforces per-region daily quotas and send rates. Mirror them in the inbox's **Max emails per day** and **Wait between emails** so Outreach never outruns your SES limits.
+- **Broken credentials auto-pause:** if the relay rejects authentication (e.g. `535 Authentication failed`), Outreach **pauses the inbox** and fires a `token_expired` notification (with `provider: "smtp"`) instead of retrying forever. Fix the credentials, then resume the inbox from **Inboxes → Resume**.
 
 ### Updating SMTP credentials from the command line
 
@@ -804,7 +804,7 @@ Give your campaign a name and an optional timezone. If set, emails will be sched
 
 **2. Assign inboxes.**
 
-Select which inboxes this campaign sends from. Quickly automatically rotates sends across them, respecting per-inbox daily limits and warm-up schedules.
+Select which inboxes this campaign sends from. Outreach automatically rotates sends across them, respecting per-inbox daily limits and warm-up schedules.
 
 **3. Build your sequence.**
 
@@ -818,7 +818,7 @@ Add as many follow-up steps as you want.
 
 **4. (Optional) Add A/B variants.**
 
-On any step, click **Add Variant** to create an alternate subject or body. Quickly selects randomly at send time and tracks performance per variant.
+On any step, click **Add Variant** to create an alternate subject or body. Outreach selects randomly at send time and tracks performance per variant.
 
 **5. Import leads.**
 
@@ -840,7 +840,7 @@ Click **Start Campaign**. The queue engine reserves send slots across your inbox
 
 ## Optional: AI Reply Classification
 
-Quickly automatically classifies every reply into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`.
+Outreach automatically classifies every reply into one of six categories: `interested`, `not_interested`, `out_of_office`, `wrong_person`, `auto_reply`, or `unsubscribed`.
 
 **Supported providers:** OpenAI, Anthropic Claude, Google Gemini, Mistral, Groq, Cohere, and 13+ others — including **Ollama** for fully local/offline classification.
 
@@ -856,34 +856,34 @@ All AI settings are stored in the database — no restart required.
 
 ---
 
-## Quickly Beacon (recommended custom tracking hostnames)
+## Outreach Beacon (recommended custom tracking hostnames)
 
-Use **Quickly Beacon** when you want open, click, and unsubscribe links to use **your own hostname** (for example `track.yourbrand.com`) without pointing that DNS name at the main Quickly app.
+Use **Outreach Beacon** when you want open, click, and unsubscribe links to use **your own hostname** (for example `track.yourbrand.com`) without pointing that DNS name at the main Outreach app.
 
-**Self-hosted Docker:** If you plan to use **only Beacon** (and not the legacy CNAME-to-Quickly tracking flow), **`docker-compose.no-caddy.yml` is the recommended Compose file** — Postgres plus the Quickly image on port **8000**, no Caddy in the stack. Put your own reverse proxy in front for HTTPS. See [Beacon-only (recommended)](#beacon-only-docker-compose-no-caddy) under Option B.
+**Self-hosted Docker:** If you plan to use **only Beacon** (and not the legacy CNAME-to-Outreach tracking flow), **`docker-compose.no-caddy.yml` is the recommended Compose file** — Postgres plus the Outreach image on port **8000**, no Caddy in the stack. Put your own reverse proxy in front for HTTPS. See [Beacon-only (recommended)](#beacon-only-docker-compose-no-caddy) under Option B.
 
-**How it works:** Beacon is a small tracking proxy. It serves pixels and redirects on the domain you choose, then posts signed events back to Quickly. Your main app URL stays on Railway, VPS Compose, etc.
+**How it works:** Beacon is a small tracking proxy. It serves pixels and redirects on the domain you choose, then posts signed events back to Outreach. Your main app URL stays on Railway, VPS Compose, etc.
 
 **Typical setup**
 
 1. **Run Beacon** so it is reachable on the HTTPS origin you want for tracking (for example a small VM, Railway service, or a `reverse_proxy` on host Caddy to `127.0.0.1:8090`).
 2. Set **`BEACON_PUBLIC_BASE_URL`** to that public origin (with protocol, no trailing path) if Beacon must print correct setup links in logs or HTML.
 3. While Beacon is **not** connected yet, open its root URL and **copy the setup link** (includes `?token=…`).
-4. In Quickly → **Inboxes** → choose an inbox → **Connect Beacon**, paste the full URL. After a successful connect, Beacon stops showing the token on `/` and behaves like a normal tracking host.
+4. In Outreach → **Inboxes** → choose an inbox → **Connect Beacon**, paste the full URL. After a successful connect, Beacon stops showing the token on `/` and behaves like a normal tracking host.
 
-**Multiple inboxes:** One Beacon deployment and one DNS hostname can serve **many** Quickly inboxes. Use the **same** Beacon URL for each inbox; paste the setup link (or rely on Quickly’s saved token) and click **Connect** per inbox so each gets its own webhook secret and token registrations. Disconnecting one inbox in Quickly removes only that inbox’s rows on Beacon.
+**Multiple inboxes:** One Beacon deployment and one DNS hostname can serve **many** Outreach inboxes. Use the **same** Beacon URL for each inbox; paste the setup link (or rely on Outreach’s saved token) and click **Connect** per inbox so each gets its own webhook secret and token registrations. Disconnecting one inbox in Outreach removes only that inbox’s rows on Beacon.
 
 In the inbox **Edit** UI, expand **Use a tracker already linked to another inbox** to pick an existing Beacon or DNS setup from another inbox and connect in one click (no need to paste the setup URL again for Beacon).
 
 That is the full loop for most operators.
 
-**Prebuilt image / Docker Hub (`azowail/quickly:latest`)** sets `QUICKLY_PREBUILT_IMAGE=1`. The inbox UI **hides** the legacy “custom domain + CNAME to Quickly” section and steers you to Beacon instead. To show that CNAME workflow again (for example on a **host Caddy** deployment where Quickly terminates on-demand TLS for tracking hosts), set **`QUICKLY_TRACKING_CNAME_UI=1`** or **`QUICKLY_PREBUILT_IMAGE=0`** in the app environment and restart.
+**Prebuilt image / Docker Hub (`azowail/quickly:latest`)** sets `QUICKLY_PREBUILT_IMAGE=1`. The inbox UI **hides** the legacy “custom domain + CNAME to Outreach” section and steers you to Beacon instead. To show that CNAME workflow again (for example on a **host Caddy** deployment where Outreach terminates on-demand TLS for tracking hosts), set **`QUICKLY_TRACKING_CNAME_UI=1`** or **`QUICKLY_PREBUILT_IMAGE=0`** in the app environment and restart.
 
 ---
 
-## Optional: Advanced — CNAME custom domains to Quickly
+## Optional: Advanced — CNAME custom domains to Outreach
 
-> **Legacy / advanced.** Prefer [Quickly Beacon](#quickly-beacon-recommended-custom-tracking-hostnames). This path only applies when **Quickly’s Caddy** (Compose or **host** Caddy) terminates HTTPS for the tracking hostname via **on-demand TLS** and the `/api/caddy/ask` flow. It is **not** how Railway-only or minimal PaaS installs are expected to add a tracking domain.
+> **Legacy / advanced.** Prefer [Outreach Beacon](#outreach-beacon-recommended-custom-tracking-hostnames). This path only applies when **Outreach’s Caddy** (Compose or **host** Caddy) terminates HTTPS for the tracking hostname via **on-demand TLS** and the `/api/caddy/ask` flow. It is **not** how Railway-only or minimal PaaS installs are expected to add a tracking domain.
 
 Requires Caddy with on-demand TLS (Option B, Option C after migrating to Caddy, or **not-host** + `Caddyfile.host`).
 
@@ -891,15 +891,15 @@ Requires Caddy with on-demand TLS (Option B, Option C after migrating to Caddy, 
 
 1. In your DNS provider, add a CNAME record:
     - **Name:** `track` (or any subdomain you prefer)
-    - **Value:** the hostname Caddy uses for Quickly (often your main app host), as shown in the inbox UI when the CNAME workflow is enabled
-2. In Quickly → **Inboxes** → tracking section, choose **Custom domain**, verify DNS, and save
+    - **Value:** the hostname Caddy uses for Outreach (often your main app host), as shown in the inbox UI when the CNAME workflow is enabled
+2. In Outreach → **Inboxes** → tracking section, choose **Custom domain**, verify DNS, and save
 3. Enter the full subdomain (e.g. `track.yourdomain.com`)
 
 Caddy automatically provisions a certificate for this domain on the first request.
 
 ---
 
-## Updating Quickly
+## Updating Outreach
 
 **`docker-compose.yml` (Caddy in Docker):**
 
@@ -922,11 +922,14 @@ docker compose -f docker-compose.no-caddy.yml pull
 docker compose -f docker-compose.no-caddy.yml up -d
 ```
 
-The PostgreSQL Docker volume keeps your data across updates (`quickly_pgdata` for the Caddy and not-host stacks; a Compose-managed volume for **`docker-compose.no-caddy.yml`**). Quickly applies schema changes on startup — no manual migrations needed.
+The PostgreSQL Docker volume keeps your data across updates (`quickly_pgdata` for the Caddy and not-host stacks; a Compose-managed volume for **`docker-compose.no-caddy.yml`**). Outreach applies schema changes on startup — no manual migrations needed.
 
 ---
 
 ## Environment Variables Reference
+
+> **Note:** Runtime identifiers retain the historical `QUICKLY_` prefix (for example `QUICKLY_SECRET_KEY`) even though the product brand is Outreach.
+
 
 > The `.env` file is intentionally minimal. Most runtime settings (send windows, warm-up schedules, AI providers, etc.) are configured from the **Settings page** in the UI and stored in the database.
 
@@ -947,10 +950,10 @@ The PostgreSQL Docker volume keeps your data across updates (`quickly_pgdata` fo
 |`QUICKLY_TELEMETRY_KEY`|No|_(release build secret)_|Managed hub write key; never commit a real key|
 |`QUICKLY_VERSION`|Release build only|_(injected)_|Release version used by telemetry; source builds default to `unknown` and do not send|
 |`QUICKLY_LOCAL_DISK_BACKUPS`|No|_(off)_|Set to `1` or `true` to allow saving backups under a folder in **Settings → Setup → Backup** (default `backups/` under the app directory). The **docker-compose\*.yml** files in this repo (including **`docker-compose.no-caddy.yml`**) set this and mount **`./backups:/app/backups`**. The app keeps the **10** newest backup files (`.qbk` wrapper format). PaaS without a volume: use **webhook** instead.|
-|`QUICKLY_PREBUILT_IMAGE`|No|`1` in Docker image|When `1`/`true`/`yes`, the inbox UI hides CNAME-to-Quickly custom tracking setup so operators use **Beacon** instead. **`docker-compose.dev.yml`** sets `0` (CNAME UI visible while hacking). Production **`docker-compose-not-host.yml`** sets `0` for legacy host-Caddy + CNAME tracking. **`docker-compose.no-caddy.yml`**, **`docker-compose.no-caddy.dev.yml`**, and **`docker-compose-not-host.dev.yml`** set `1` to mirror the prebuilt image.|
+|`QUICKLY_PREBUILT_IMAGE`|No|`1` in Docker image|When `1`/`true`/`yes`, the inbox UI hides CNAME-to-Outreach custom tracking setup so operators use **Beacon** instead. **`docker-compose.dev.yml`** sets `0` (CNAME UI visible while hacking). Production **`docker-compose-not-host.yml`** sets `0` for legacy host-Caddy + CNAME tracking. **`docker-compose.no-caddy.yml`**, **`docker-compose.no-caddy.dev.yml`**, and **`docker-compose-not-host.dev.yml`** set `1` to mirror the prebuilt image.|
 |`QUICKLY_TRACKING_CNAME_UI`|No|_(off)_|Set to `1`/`true`/`yes` to **show** the CNAME custom tracking UI even when `QUICKLY_PREBUILT_IMAGE=1` (advanced / host-Caddy setups).|
 
-**Backup and restore:** Backups are packaged as **`.qbk`** files (current format embeds a manifest plus a PostgreSQL custom-format dump). **Encrypted** backups include a small **plaintext preview** of the manifest (admin emails masked) so the UI can show what you are restoring before you enter the password; the dump itself stays encrypted. Older `.qbk` files from previous Quickly versions are not accepted — export a new backup from a current instance. You can download an encrypted backup from Settings (password required to restore; losing the password makes the file unrecoverable). If you enable **Encrypt automatic backups** in Settings, scheduled and “run now” backups use the same saved password (stored in the database, like webhook secrets). Restore uses **read metadata → verify password (if encrypted) → confirm** steps. The app uses `pg_dump` / `pg_restore` internally. The production Docker image includes the PostgreSQL client tools. If you run the backend directly on the host (e.g. `uvicorn` without Docker), install the client package for your OS (e.g. `postgresql-client` on Debian/Ubuntu). Compose dev files mount `./backups` to `/app/backups` so the default folder is persisted on the host. For multi-process deployments, set **`QUICKLY_RESTORE_STAGING_DIR`** to a shared directory so restore confirmation tokens work across workers.
+**Backup and restore:** Backups are packaged as **`.qbk`** files (current format embeds a manifest plus a PostgreSQL custom-format dump). **Encrypted** backups include a small **plaintext preview** of the manifest (admin emails masked) so the UI can show what you are restoring before you enter the password; the dump itself stays encrypted. Older `.qbk` files from previous Outreach versions are not accepted — export a new backup from a current instance. You can download an encrypted backup from Settings (password required to restore; losing the password makes the file unrecoverable). If you enable **Encrypt automatic backups** in Settings, scheduled and “run now” backups use the same saved password (stored in the database, like webhook secrets). Restore uses **read metadata → verify password (if encrypted) → confirm** steps. The app uses `pg_dump` / `pg_restore` internally. The production Docker image includes the PostgreSQL client tools. If you run the backend directly on the host (e.g. `uvicorn` without Docker), install the client package for your OS (e.g. `postgresql-client` on Debian/Ubuntu). Compose dev files mount `./backups` to `/app/backups` so the default folder is persisted on the host. For multi-process deployments, set **`QUICKLY_RESTORE_STAGING_DIR`** to a shared directory so restore confirmation tokens work across workers.
 
 **Generate a secret key:**
 

@@ -1,4 +1,4 @@
-# Quickly — Screenshots
+# Outreach — Screenshots
 
 ---
 
@@ -7,14 +7,14 @@
 # Screenshot Analysis: Campaign Management Interface
 
 ## UI Layout Overview
-This is a **dark-themed web application** (likely a SaaS outreach/campaign management platform called "Quickly") with a two-panel layout:
+This is a **dark-themed web application** (likely a SaaS outreach/campaign management platform called "Outreach") with a two-panel layout:
 - **Left sidebar navigation** (fixed width)
 - **Main content area** displaying campaign management tools
 
 ## Key UI Elements
 
 ### Left Sidebar Navigation
-- **Logo:** Green lightning bolt icon with "Quickly" text
+- **Logo:** Green lightning bolt icon with "Outreach" text
 - **Navigation items** (with icons):
   - Analytics
   - **Campaigns** (currently selected - highlighted in teal/cyan)
@@ -51,7 +51,7 @@ This is a **dark-themed web application** (likely a SaaS outreach/campaign manag
 
 ## Analatics page.png
 
-This is a dark-themed, modern SaaS analytics dashboard for an email outreach platform called **Quickly**, with crisp, high-resolution UI quality and clean visual hierarchy:
+This is a dark-themed, modern SaaS analytics dashboard for an email outreach platform called **Outreach**, with crisp, high-resolution UI quality and clean visual hierarchy:
 
 ### UI Layout
 1.  **Left Vertical Sidebar**:
@@ -82,12 +82,12 @@ This is a dark-themed, modern SaaS analytics dashboard for an email outreach pla
 
 ## campaign analatics tab.png
 
-This screenshot displays a modern, dark-themed SaaS analytics dashboard for a campaign titled "Q3 SaaS Outreach" within an application called "Quickly."
+This screenshot displays a modern, dark-themed SaaS analytics dashboard for a campaign titled "Q3 SaaS Outreach" within an application called "Outreach."
 
 ### UI Layout
 The interface follows a standard dashboard layout with a fixed left sidebar and a scrollable main content area.
 
-*   **Left Sidebar:** Contains the brand logo ("Quickly") and a vertical navigation menu with icons for Analytics, Campaigns, Leads, Inboxes, Unibox, Schedule, Notifications, Settings, System Health, and Help. Certain items (Unibox, Notifications) feature red numerical badges indicating pending items.
+*   **Left Sidebar:** Contains the brand logo ("Outreach") and a vertical navigation menu with icons for Analytics, Campaigns, Leads, Inboxes, Unibox, Schedule, Notifications, Settings, System Health, and Help. Certain items (Unibox, Notifications) feature red numerical badges indicating pending items.
 *   **Header Area:** Displays the campaign name and a horizontal tab bar (Analytics, Sequences, Leads, Queue, Settings). The "Analytics" tab is currently active.
 *   **KPI Summary Row:** Six rectangular cards at the top of the main area display key metrics: **Leads (15)**, **Sent (38)**, **Replies (0)**, **Open Rate (55%)**, **Reply Rate (0%)**, and **Click Rate (11%)**.
 *   **Time Filter Bar:** A row of pill-shaped buttons allows filtering the data by timeframes (e.g., "Last 7 Days," which is currently selected).
@@ -110,7 +110,7 @@ The interface follows a standard dashboard layout with a fixed left sidebar and 
 
 ## campaign sequences tab.png
 
-This screenshot displays a web application dashboard for a campaign management platform called "Quickly," specifically showing the "Sequences" tab for a campaign titled "Q3 SaaS Outreach."
+This screenshot displays a web application dashboard for a campaign management platform called "Outreach," specifically showing the "Sequences" tab for a campaign titled "Q3 SaaS Outreach."
 
 ### UI Layout
 *   **Three-Column Structure:** The interface follows a standard modern SaaS layout consisting of a narrow left sidebar, a secondary panel for sequence steps, and a primary workspace on the right for content editing.
@@ -143,7 +143,7 @@ This screenshot displays a web application dashboard for a campaign management p
 
 ## campaign leads tab.png
 
-The screenshot shows a high-quality, professional web application interface for a tool called **Quickly**, which appears to be a sales outreach or CRM platform. The interface is in **dark mode** with a modern, clean aesthetic.
+The screenshot shows a high-quality, professional web application interface for a tool called **Outreach**, which appears to be a sales outreach or CRM platform. The interface is in **dark mode** with a modern, clean aesthetic.
 
 ### UI Layout and Key Elements
 
@@ -185,7 +185,7 @@ The screenshot shows a high-quality, professional web application interface for 
 
 ## Inboxes page.png
 
-This screenshot depicts the **"Inboxes"** management page of a dark-themed web application called **"Quickly."** The layout is divided into three main sections:
+This screenshot depicts the **"Inboxes"** management page of a dark-themed web application called **"Outreach."** The layout is divided into three main sections:
 
 ### **1. Left Sidebar Navigation**
 A vertical sidebar on the left contains the application logo and navigation links. Items include:
@@ -221,7 +221,7 @@ A panel on the right provides detailed configuration and statistics for the sele
 
 ## Leads page.png
 
-This screenshot displays the "Leads" management interface of a web application called **Quickly**. The UI is designed with a modern dark theme, typical for SaaS dashboards.
+This screenshot displays the "Leads" management interface of a web application called **Outreach**. The UI is designed with a modern dark theme, typical for SaaS dashboards.
 
 ### **UI Layout**
 The interface follows a standard dashboard structure:
@@ -259,7 +259,7 @@ The interface follows a standard dashboard structure:
 - **Main content area** taking remaining width
 
 ## Left Sidebar Elements
-- **Logo:** "Quickly" with a lightning bolt icon
+- **Logo:** "Outreach" with a lightning bolt icon
 - **Navigation menu items** (top to bottom):
   - Analytics, Campaigns, Leads, Inboxes, Unibox (red badge: 13), **Schedule** (currently active/highlighted), Notifications (red badge: 12), Settings
 - **Bottom section:** System Health, Help
@@ -300,9 +300,9 @@ Three metric cards in a row:
 ## Notifications page.png
 
 ### UI Layout & Key Elements
-This is a dark-themed dashboard for the **Quickly**, an email/campaign outreach platform, focused on the **Notifications** page:
+This is a dark-themed dashboard for the **Outreach**, an email/campaign outreach platform, focused on the **Notifications** page:
 1.  **Left Sidebar (Navigation)**:
-    -   Top: Green lightning bolt logo + "Quickly" brand text (green)
+    -   Top: Green lightning bolt logo + "Outreach" brand text (green)
     -   Menu items with icons:
         *   Analytics, Campaigns, Leads, Inboxes, Unibox with a red "12" badge, Schedule, **Notifications highlighted, selected with a red "2" badge**, Settings
     -   Bottom: *System Health* with green checkmark badge, *Help* (question mark icon), plus a sidebar toggle icon
@@ -324,7 +324,7 @@ This is a dark-themed dashboard for the **Quickly**, an email/campaign outreach 
 
 ## settings page.png
 
-This screenshot shows the **Settings** page of an application named **"Quickly"**. It features a dark-themed dashboard layout with teal/cyan accents.
+This screenshot shows the **Settings** page of an application named **"Outreach"**. It features a dark-themed dashboard layout with teal/cyan accents.
 
 ### **UI Layout**
 The interface is organized into three main parts:
@@ -345,11 +345,11 @@ The image is of **high quality**, displaying a clean, modern, and professional u
 
 ## System health page.png
 
-This screenshot shows a **System Health** dashboard for a web application called **"Quickly"**.
+This screenshot shows a **System Health** dashboard for a web application called **"Outreach"**.
 
 ### **UI Layout**
 The interface uses a **two-column layout**:
-*   **Left Sidebar (Fixed):** A dark sidebar containing the "Quickly" logo at the top and navigation links including Analytics, Campaigns, Leads, Inboxes, Unibox (with a red notification badge), Schedule, Notifications (also with a red badge), and Settings. At the bottom, it has links for "System Health" and "Help."
+*   **Left Sidebar (Fixed):** A dark sidebar containing the "Outreach" logo at the top and navigation links including Analytics, Campaigns, Leads, Inboxes, Unibox (with a red notification badge), Schedule, Notifications (also with a red badge), and Settings. At the bottom, it has links for "System Health" and "Help."
 *   **Main Content Area:** A large panel displaying the system status. At the top is the page title "System Health" with a subtitle: "Monitor connection status, OAuth tokens, and feature configuration." To the right is an "Unmute all (3)" button.
 
 ### **Key Elements**
@@ -371,7 +371,7 @@ The dashboard features a **modern, clean design** with a dark mode aesthetic (da
 
 ## Unibox page.png
 
-This screenshot shows the user interface of a web application named **Quickly**, specifically the **Unibox** feature. It is a modern, dark-themed communication management tool, likely designed for sales or customer outreach.
+This screenshot shows the user interface of a web application named **Outreach**, specifically the **Unibox** feature. It is a modern, dark-themed communication management tool, likely designed for sales or customer outreach.
 
 ### **UI Layout**
 The interface follows a classic three-panel layout common in email and messaging applications:

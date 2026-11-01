@@ -26,15 +26,15 @@ import { webhookFields } from './webhooks.operations';
 
 export class Quickly implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'Quickly',
+    displayName: 'Outreach',
     name: 'quickly',
     icon: 'fa:paper-plane',
     group: ['transform'],
     version: 1,
     subtitle: '={{$parameter["operation"]}}',
-    description: 'Interact with the Quickly email outreach REST API (see docs/API.md)',
+    description: 'Interact with the Outreach email outreach REST API (see docs/API.md)',
     defaults: {
-      name: 'Quickly',
+      name: 'Outreach',
     },
     inputs: [NodeConnectionTypes.Main],
     outputs: [NodeConnectionTypes.Main],

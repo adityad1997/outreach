@@ -177,7 +177,7 @@ export default function Login() {
       <div className="max-w-md w-full space-y-8 p-8">
         <div>
           <h1 className="text-center text-3xl font-bold text-gray-900">
-            Quickly
+            Outreach
           </h1>
           <h2 className="mt-2 text-center text-lg text-gray-600">
             {heading}
@@ -347,7 +347,7 @@ export default function Login() {
                     </button>
                   </div>
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    Use a Quickly backup file (<code className="text-[11px]">.qbk</code>). If the backup is encrypted, you need the password — losing it
+                    Use an Outreach backup file (<code className="text-[11px]">.qbk</code>). If the backup is encrypted, you need the password — losing it
                     means the data in that file is unrecoverable. The optional hint is stored in plain text in the file.
                   </p>
                   <div className="flex items-stretch gap-2">

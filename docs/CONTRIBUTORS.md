@@ -1,4 +1,4 @@
-# Contributing to Quickly
+# Contributing to Outreach
 
 Thanks for your interest in contributing! This guide will help you get set up and make meaningful contributions.
 
@@ -67,7 +67,7 @@ The Vite dev server (`localhost:5173`) proxies API calls to the backend (`localh
 ## Project Structure
 
 ```
-Quickly/
+Outreach/
 ├── app/                    # FastAPI backend
 │   ├── main.py             # App entry point, startup, routes
 │   ├── models.py           # SQLAlchemy models

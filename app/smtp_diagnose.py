@@ -1,4 +1,4 @@
-"""Staged SMTP/IMAP diagnostic probe for a Quickly SMTP inbox.
+"""Staged SMTP/IMAP diagnostic probe for an Outreach SMTP inbox.
 
 Standalone, stdlib-only. Runs a sequence of stages against a relay and
 collects, for every stage, ``{"name", "ok", "detail", "raw"}`` where ``raw``
@@ -306,7 +306,7 @@ def _stage_tcp(host: str, port: int, timeout: float, stage: StageResult) -> tupl
         stage.ok = False
         stage.detail = f"TCP timeout after {timeout:.0f}s — packets are being dropped."
         return None, [
-            "TCP timeout: the machine running Quickly cannot reach that port and the "
+            "TCP timeout: the machine running Outreach cannot reach that port and the "
             "packets are dropped (firewall / egress block / cloud provider SMTP "
             "restriction). Check the host's outbound firewall rules.",
         ]
@@ -477,7 +477,7 @@ def _stage_send_probe(
             hints.append(
                 "The relay rejected your sender address (MAIL FROM) with a 5xx. This is "
                 "relay policy — the sender is not permitted / is not a configured "
-                "mailbox on the mail host, not a Quickly bug. Use an address that "
+                "mailbox on the mail host, not an Outreach bug. Use an address that "
                 "belongs to the SMTP account (usually the same as the username)."
             )
         else:
@@ -523,11 +523,11 @@ def _stage_send_probe(
     body = (
         f"From: {from_email}\r\n"
         f"To: {to_email}\r\n"
-        f"Subject: Quickly SMTP diagnostic probe\r\n"
+        f"Subject: Outreach SMTP diagnostic probe\r\n"
         f"Message-ID: <diagnose.{int(time.time())}@{host}>\r\n"
         f"X-Quickly-Diagnose: 1\r\n"
         "\r\n"
-        "This is an automated deliverability probe sent by the Quickly "
+        "This is an automated deliverability probe sent by the Outreach "
         "\"Diagnose inbox\" feature. No action is required.\r\n"
         ".\r\n"
     )
@@ -570,7 +570,7 @@ def _stage_imap_connect(
         return hints
     if not use_ssl:
         hints.append(
-            "IMAP is configured without SSL. Quickly currently supports SSL IMAP "
+            "IMAP is configured without SSL. Outreach currently supports SSL IMAP "
             "only (typically port 993) — STARTTLS on 143 is not implemented, so "
             "reply sync will not work with the current settings."
         )
@@ -744,7 +744,7 @@ def _probe_once(
         if not stages["mail_from"].ok:
             report.verdict = (
                 "Authentication works, but the relay rejects the sender address — "
-                "sending is blocked by relay policy, not by Quickly."
+                "sending is blocked by relay policy, not by Outreach."
             )
             report.hints = all_hints
             return report
@@ -784,7 +784,7 @@ def _probe_once(
     report.ok = all(s.ok for s in report.stages)
     if report.ok:
         report.verdict = (
-            "All stages passed — Quickly's SMTP path will work with these settings. "
+            "All stages passed — Outreach's SMTP path will work with these settings. "
             "If mail still does not arrive, the problem is downstream of the relay "
             "(e.g. the relay's own port-25 egress)."
         )
@@ -943,7 +943,7 @@ def diagnose_account(account, to_email: str = "") -> dict[str, Any]:
 def render_text_report(report: dict[str, Any]) -> str:
     """Render the report as plain text for pasting into a support thread."""
     lines = [
-        "Quickly SMTP diagnostic report",
+        "Outreach SMTP diagnostic report",
         f"Target: {report.get('host')}:{report.get('port')}  mode={report.get('mode')}",
         f"Result: {'PASS' if report.get('ok') else 'FAIL'}  ({report.get('duration_ms', 0)} ms)",
         "",
@@ -1031,7 +1031,7 @@ async def _cli_inbox(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m app.smtp_diagnose",
-        description="Staged SMTP/IMAP diagnostic for a Quickly SMTP inbox.",
+        description="Staged SMTP/IMAP diagnostic for an Outreach SMTP inbox.",
     )
     parser.add_argument("--inbox-id", type=int, help="Run against this inbox's stored credentials.")
     parser.add_argument("--host", help="Ad-hoc host (when not using --inbox-id).")

@@ -1,0 +1,43 @@
+# Production: Postgres + app built from this repo. HTTPS via host Apache
+# (see deploy/README.md). App listens on 127.0.0.1:8000 only.
+
+name: outreach
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quickly
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@db:5432/quickly"
+      QUICKLY_LOCAL_DISK_BACKUPS: "1"
+      QUICKLY_PREBUILT_IMAGE: "0"
+    volumes:
+      - ./backups:/app/backups
+
+volumes:
+  pgdata:
+    external: true
+    name: outreach_pgdata

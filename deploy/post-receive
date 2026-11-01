@@ -1,0 +1,23 @@
+#!/bin/bash
+# Install on the VPS as: /var/git/outreach.git/hooks/post-receive
+#   cp deploy/post-receive /var/git/outreach.git/hooks/post-receive
+#   chmod +x /var/git/outreach.git/hooks/post-receive
+set -euo pipefail
+
+TARGET=/var/www/outreach
+GIT_DIR=/var/git/outreach.git
+
+echo "[deploy] Checking out main → ${TARGET}"
+git --work-tree="$TARGET" --git-dir="$GIT_DIR" checkout -f main
+
+cd "$TARGET"
+
+if [[ ! -f .env ]]; then
+  echo "[deploy] ERROR: ${TARGET}/.env is missing. Create it before deploying." >&2
+  exit 1
+fi
+
+echo "[deploy] Building and starting docker compose (prod)"
+docker compose -f docker-compose.prod.yml up -d --build
+
+echo "[deploy] Done."
